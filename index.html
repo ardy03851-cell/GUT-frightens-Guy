@@ -352,8 +352,10 @@ if (typeof THREE === 'undefined') {
 }
 </script>
 
+<!-- World systems, in load order: terrain → graphics → models -->
 <script src="terrain.js"></script>
 <script src="graphics.js"></script>
+<script src="models.js"></script>
 
 <script>
 (function () {
