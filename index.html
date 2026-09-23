@@ -49,209 +49,281 @@
       display: block;
     }
 
+    /* ============ PIXEL-RPG WOOD PANEL THEME ============ */
+
+    /* HUD — a chunky wood signpost */
     #hud {
       position: fixed;
-      top: calc(env(safe-area-inset-top, 0px) + 10px);
-      left: calc(env(safe-area-inset-left, 0px) + 10px);
+      top: calc(env(safe-area-inset-top, 0px) + 12px);
+      left: calc(env(safe-area-inset-left, 0px) + 12px);
       font-size: 12px;
-      line-height: 1.55;
-      background: rgba(0, 0, 0, .5);
-      padding: 8px 12px;
-      border-radius: 8px;
-      pointer-events: none;
-      text-shadow: 0 1px 0 rgba(0, 0, 0, .7);
+      line-height: 1.7;
       letter-spacing: .5px;
-      border: 1px solid rgba(255, 255, 255, .1);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      padding: 10px 14px 10px 12px;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, #5a3a1a 0%, #3a2410 55%, #2a1808 100%);
+      border: 3px solid #2a1808;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 0 0 1px #b8863a,
+        inset 0 3px 0 rgba(255, 220, 150, .18),
+        inset 0 -3px 0 rgba(0, 0, 0, .45),
+        0 4px 0 #1a0e04,
+        0 8px 18px rgba(0, 0, 0, .65);
+      color: #f4e0b0;
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, .85);
+      min-width: 172px;
+    }
+
+    #hud::before {
+      content: '';
+      position: absolute;
+      left: 6px; right: 6px; top: 4px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255,220,150,.35), transparent);
+      pointer-events: none;
+    }
+
+    #hud .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     #hud .k {
-      color: #8fb8ff;
+      color: #d4a860;
+      letter-spacing: 2px;
     }
 
     #hud .v {
       color: #ffe07a;
+      font-weight: bold;
     }
 
-    #hud .mode {
-      color: #7cffa0;
-    }
+    #hud .v.mode { color: #8affb0; }
+    #hud .v.wx { color: #9fe8ff; }
+    #hud .v.fps { color: #c8c8c8; }
 
-    #hud .wx {
-      color: #9fe8ff;
-    }
-
+    /* Inventory — a row of leather pouches */
     #inv {
       position: fixed;
-      top: calc(env(safe-area-inset-top, 0px) + 10px);
+      top: calc(env(safe-area-inset-top, 0px) + 12px);
       left: 50%;
       transform: translateX(-50%);
       font-size: 12px;
-      line-height: 1.6;
-      background: rgba(0, 0, 0, .5);
-      padding: 8px 16px;
-      border-radius: 10px;
+      padding: 8px 14px;
       pointer-events: none;
-      text-shadow: 0 1px 0 rgba(0, 0, 0, .7);
-      white-space: nowrap;
-      border: 1px solid rgba(255, 255, 255, .1);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background:
+        linear-gradient(180deg, #4a2e14 0%, #2a1808 100%);
+      border: 3px solid #1a0e04;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 0 0 1px #b8863a,
+        inset 0 2px 0 rgba(255, 220, 150, .15),
+        inset 0 -2px 0 rgba(0, 0, 0, .5),
+        0 4px 0 #100804,
+        0 6px 14px rgba(0, 0, 0, .6);
+      color: #f4e0b0;
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, .85);
       display: none;
+      white-space: nowrap;
     }
 
     body.playing #inv {
       display: flex;
-      gap: 12px;
+      gap: 16px;
       align-items: center;
     }
 
     .inv-item {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      padding: 2px 4px;
+      border-radius: 3px;
     }
 
     .inv-icon {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 3px;
       display: inline-block;
-      box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+      box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, .7),
+        inset 0 2px 0 rgba(255, 255, 255, .35),
+        0 0 0 2px #1a0e04;
+      image-rendering: pixelated;
     }
 
-    .inv-icon.coin {
-      background: #ffd94a;
-    }
-
-    .inv-icon.potion {
-      background: #e04a4a;
-    }
-
-    .inv-icon.gem {
-      background: #3fd0ee;
-    }
-
-    .inv-icon.chest {
-      background: #8a5a28;
-    }
+    .inv-icon.coin   { background: radial-gradient(circle at 35% 30%, #fff3a8, #ffd94a 45%, #b08010); }
+    .inv-icon.potion { background: radial-gradient(circle at 35% 30%, #ff9090, #e04a4a 45%, #7a1a1a); }
+    .inv-icon.gem    { background: radial-gradient(circle at 35% 30%, #c9faff, #3fd0ee 45%, #106080); }
+    .inv-icon.chest  { background: linear-gradient(180deg, #a8703a 0%, #6a3a18 50%, #4a2a10 100%); }
 
     .inv-item span.v {
       color: #ffe07a;
       font-weight: bold;
+      min-width: 12px;
     }
 
+    /* Minimap — a compass disc */
     #minimap {
       position: fixed;
-      right: calc(env(safe-area-inset-right, 0px) + 10px);
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-      width: 130px;
-      height: 130px;
-      border: 2px solid rgba(255, 255, 255, .35);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, .6);
+      right: calc(env(safe-area-inset-right, 0px) + 14px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: #0a0a14;
       image-rendering: pixelated;
       pointer-events: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
+      box-shadow:
+        0 0 0 3px #b8863a,
+        0 0 0 6px #2a1808,
+        0 0 0 9px #8a5a2a,
+        0 0 0 11px #1a0e04,
+        0 8px 0 rgba(0, 0, 0, .5),
+        0 12px 24px rgba(0, 0, 0, .75);
     }
 
+    /* Joystick */
     #stick {
       position: fixed;
-      width: 120px;
-      height: 120px;
+      width: 130px;
+      height: 130px;
       border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, .35);
-      background: rgba(255, 255, 255, .08);
+      border: 4px solid #b8863a;
+      background:
+        radial-gradient(circle, rgba(120, 80, 30, .35) 0%, rgba(60, 40, 15, .55) 70%, rgba(30, 20, 8, .7) 100%);
       display: none;
       pointer-events: none;
       transform: translate(-50%, -50%);
       z-index: 5;
+      box-shadow:
+        inset 0 0 0 2px #2a1808,
+        0 0 0 2px #1a0e04,
+        0 6px 12px rgba(0, 0, 0, .6);
     }
 
     #knob {
       position: absolute;
-      width: 50px;
-      height: 50px;
+      width: 54px;
+      height: 54px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, .45);
-      border: 2px solid rgba(255, 255, 255, .65);
+      background:
+        radial-gradient(circle at 40% 35%, #f0d090, #a8703a 60%, #5a3a1a);
+      border: 3px solid #1a0e04;
+      box-shadow:
+        inset 0 2px 0 rgba(255, 230, 170, .55),
+        inset 0 -3px 0 rgba(0, 0, 0, .35),
+        0 3px 0 rgba(0, 0, 0, .4);
       transform: translate(-50%, -50%);
-      left: 60px;
-      top: 60px;
+      left: 65px;
+      top: 65px;
     }
 
     #hint {
       position: fixed;
       left: 50%;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
       transform: translateX(-50%);
       font-size: 11px;
-      opacity: .8;
+      opacity: .85;
       pointer-events: none;
-      background: rgba(0, 0, 0, .5);
-      padding: 7px 14px;
-      border-radius: 8px;
-      letter-spacing: 1px;
+      background: linear-gradient(180deg, #3a2410 0%, #1a0e04 100%);
+      padding: 8px 16px;
+      border: 2px solid #2a1808;
+      border-radius: 4px;
+      letter-spacing: 1.5px;
       transition: opacity .8s;
       z-index: 5;
-      border: 1px solid rgba(255, 255, 255, .1);
+      color: #d4a860;
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, .8);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 220, 150, .15),
+        0 3px 0 #100804,
+        0 6px 12px rgba(0, 0, 0, .5);
       text-align: center;
       max-width: 92vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    /* Action buttons */
     #actionRow {
       position: fixed;
-      left: calc(env(safe-area-inset-left, 0px) + 10px);
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+      left: calc(env(safe-area-inset-left, 0px) + 14px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       z-index: 6;
     }
 
     .action-btn {
       font-family: inherit;
-      font-weight: bold;
+      font-weight: 900;
       font-size: 13px;
       letter-spacing: 2px;
-      color: #fff;
+      color: #f0e0b0;
       padding: 12px 18px;
-      min-width: 130px;
-      background: linear-gradient(#4a6ab8, #2d4380);
-      border: 3px solid #000;
-      box-shadow:
-        inset -3px -3px 0 rgba(0, 0, 0, .35),
-        inset 3px 3px 0 rgba(255, 255, 255, .25),
-        4px 4px 0 rgba(0, 0, 0, .5);
+      min-width: 132px;
       cursor: pointer;
       -webkit-appearance: none;
-      text-shadow: 1px 1px 0 rgba(0, 0, 0, .7);
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, .85);
       touch-action: manipulation;
+      background:
+        linear-gradient(180deg, #b8863a 0%, #8a5a2a 45%, #6a3a1a 100%);
+      border: 3px solid #1a0e04;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 220, 150, .35),
+        inset 0 3px 0 rgba(255, 230, 170, .35),
+        inset 0 -3px 0 rgba(0, 0, 0, .4),
+        0 5px 0 #1a0e04,
+        0 8px 14px rgba(0, 0, 0, .55);
+      transition: transform .04s, box-shadow .04s, filter .1s;
     }
 
     .action-btn:active {
-      transform: translate(2px, 2px);
+      transform: translate(0, 4px);
       box-shadow:
-        inset -2px -2px 0 rgba(0, 0, 0, .35),
-        inset 2px 2px 0 rgba(255, 255, 255, .25),
-        2px 2px 0 rgba(0, 0, 0, .5);
+        inset 0 0 0 1px rgba(255, 220, 150, .3),
+        inset 0 3px 0 rgba(255, 230, 170, .28),
+        inset 0 -2px 0 rgba(0, 0, 0, .4),
+        0 1px 0 #1a0e04,
+        0 3px 6px rgba(0, 0, 0, .5);
     }
 
     .action-btn.fp-on {
-      background: linear-gradient(#c47b3a, #7a4a20);
+      background: linear-gradient(180deg, #e0a050 0%, #c47830 45%, #8a4a20 100%);
     }
 
     .action-btn.music-on {
-      background: linear-gradient(#4aa86a, #256b3f);
+      background: linear-gradient(180deg, #66c466 0%, #3d8b3d 45%, #1e5a1e 100%);
+      color: #f0ffe0;
     }
 
+    .action-btn.dive-active {
+      background: linear-gradient(180deg, #4a8fd7 0%, #2f6fb5 45%, #1a4a8a 100%);
+      color: #e0f0ff;
+    }
+
+    .action-btn[disabled] {
+      opacity: .45;
+      cursor: not-allowed;
+      filter: grayscale(.5);
+    }
+
+    /* Crosshair */
     #crosshair {
       position: fixed;
       left: 50%;
       top: 50%;
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 4;
@@ -262,14 +334,14 @@
     #crosshair::after {
       content: '';
       position: absolute;
-      background: rgba(255, 255, 255, .9);
-      box-shadow: 0 0 0 1px rgba(0, 0, 0, .8);
+      background: rgba(255, 240, 200, .95);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, .9);
     }
 
     #crosshair::before {
       left: 50%;
       top: 0;
-      width: 2px;
+      width: 3px;
       height: 100%;
       transform: translateX(-50%);
     }
@@ -278,7 +350,7 @@
       top: 50%;
       left: 0;
       width: 100%;
-      height: 2px;
+      height: 3px;
       transform: translateY(-50%);
     }
 
@@ -286,7 +358,25 @@
       display: block;
     }
 
-    /* ---------- MENU ---------- */
+    /* Underwater vignette overlay */
+    #underwater {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0;
+      transition: opacity .35s ease;
+      background:
+        radial-gradient(circle at center, rgba(20, 80, 140, 0) 30%, rgba(8, 40, 80, .55) 100%),
+        linear-gradient(180deg, rgba(10, 60, 120, .25) 0%, rgba(10, 60, 120, .35) 100%);
+      mix-blend-mode: multiply;
+    }
+
+    body.underwater #underwater {
+      opacity: 1;
+    }
+
+    /* ============ MENU ============ */
     #menu {
       position: fixed;
       inset: 0;
@@ -312,8 +402,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at center, rgba(0, 0, 0, .1) 25%, rgba(0, 0, 0, .85) 100%),
-        linear-gradient(180deg, rgba(0, 0, 0, .35) 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .6) 100%);
+        radial-gradient(circle at center, rgba(0, 0, 0, .1) 25%, rgba(0, 0, 0, .88) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, .4) 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .65) 100%);
       pointer-events: none;
     }
 
@@ -322,21 +412,14 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       padding: 32px;
       animation: menuIn .55s ease both;
     }
 
     @keyframes menuIn {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     #menu h1 {
@@ -344,10 +427,10 @@
       font-weight: 900;
       color: #fff;
       text-shadow:
-        4px 4px 0 #000,
-        -2px 4px 0 #000,
-        4px -2px 0 #000,
-        -2px -2px 0 #000,
+        4px 4px 0 #1a0e04,
+        -2px 4px 0 #1a0e04,
+        4px -2px 0 #1a0e04,
+        -2px -2px 0 #1a0e04,
         8px 8px 0 rgba(0, 0, 0, .55);
       line-height: .95;
       text-align: center;
@@ -377,46 +460,43 @@
       font-weight: bold;
       font-size: 13px;
       transform: rotate(-18deg);
-      text-shadow: 2px 2px 0 #000;
+      text-shadow: 2px 2px 0 #1a0e04;
       pointer-events: none;
       animation: splashPulse 1.2s ease-in-out infinite;
       white-space: nowrap;
     }
 
     @keyframes splashPulse {
-
-      0%,
-      100% {
-        transform: rotate(-18deg) scale(1);
-      }
-
-      50% {
-        transform: rotate(-18deg) scale(1.08);
-      }
+      0%, 100% { transform: rotate(-18deg) scale(1); }
+      50%      { transform: rotate(-18deg) scale(1.08); }
     }
 
     .mc-btn {
       font-family: inherit;
       font-size: 20px;
-      font-weight: bold;
+      font-weight: 900;
       letter-spacing: 3px;
-      color: #fff;
+      color: #f0e0b0;
       text-shadow: 2px 2px 0 rgba(0, 0, 0, .9);
-      padding: 14px 44px;
-      border: 3px solid #000;
+      padding: 16px 44px;
       min-width: 300px;
       cursor: pointer;
-      box-shadow:
-        inset -3px -3px 0 rgba(0, 0, 0, .35),
-        inset 3px 3px 0 rgba(255, 255, 255, .28),
-        5px 5px 0 rgba(0, 0, 0, .6);
-      transition: transform .05s, box-shadow .05s, filter .1s;
       -webkit-appearance: none;
       touch-action: manipulation;
+      border: 3px solid #1a0e04;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 220, 150, .35),
+        inset 0 3px 0 rgba(255, 230, 170, .4),
+        inset 0 -3px 0 rgba(0, 0, 0, .4),
+        0 6px 0 #1a0e04,
+        0 10px 18px rgba(0, 0, 0, .6);
+      transition: transform .05s, box-shadow .05s, filter .1s;
     }
 
     .mc-btn.play {
-      background: linear-gradient(#66c466, #3d8b3d);
+      background: linear-gradient(180deg, #66c466 0%, #3d8b3d 50%, #1e5a1e 100%);
+      color: #f0ffe0;
     }
 
     .mc-btn.play:hover {
@@ -424,28 +504,30 @@
     }
 
     .mc-btn.modding {
-      background: linear-gradient(#9a9a9a, #5a5a5a);
+      background: linear-gradient(180deg, #7a7a7a 0%, #4a4a4a 50%, #2a2a2a 100%);
       cursor: not-allowed;
       opacity: .55;
       font-size: 16px;
       min-width: 300px;
-      padding: 11px 44px;
+      padding: 13px 44px;
     }
 
     .mc-btn:active:not(:disabled) {
-      transform: translate(3px, 3px);
+      transform: translate(0, 5px);
       box-shadow:
-        inset -2px -2px 0 rgba(0, 0, 0, .35),
-        inset 2px 2px 0 rgba(255, 255, 255, .28),
-        2px 2px 0 rgba(0, 0, 0, .6);
+        inset 0 0 0 1px rgba(255, 220, 150, .3),
+        inset 0 3px 0 rgba(255, 230, 170, .3),
+        inset 0 -2px 0 rgba(0, 0, 0, .4),
+        0 1px 0 #1a0e04,
+        0 4px 8px rgba(0, 0, 0, .55);
     }
 
     #menu .footer {
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 10px;
       letter-spacing: 2px;
-      color: rgba(255, 255, 255, .55);
-      text-shadow: 1px 1px 0 rgba(0, 0, 0, .8);
+      color: rgba(255, 255, 255, .6);
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, .9);
     }
 
     #menu .mod-note {
@@ -461,36 +543,30 @@
       transition: opacity .3s;
     }
 
-    #menu .mod-note.show {
-      opacity: 1;
-    }
+    #menu .mod-note.show { opacity: 1; }
 
     #menu .tex-status {
       position: absolute;
-      bottom: -56px;
+      bottom: -58px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 10px;
-      color: rgba(255, 255, 255, .5);
+      color: rgba(255, 255, 255, .55);
       letter-spacing: 1px;
       white-space: nowrap;
       text-shadow: 1px 1px 0 rgba(0, 0, 0, .9);
       text-align: center;
     }
 
-    #menu .tex-status .ok {
-      color: #7cffa0;
-    }
+    #menu .tex-status .ok   { color: #7cffa0; }
+    #menu .tex-status .miss { color: #ffb84d; }
 
-    #menu .tex-status .miss {
-      color: #ffb84d;
-    }
-
-    /* ---------- BOOT ---------- */
+    /* ============ BOOT ============ */
     #boot {
       position: fixed;
       inset: 0;
-      background: #0a0f1c;
+      background:
+        linear-gradient(180deg, #0a0f1c 0%, #060a14 100%);
       z-index: 200;
       display: flex;
       flex-direction: column;
@@ -502,6 +578,7 @@
       text-align: center;
       padding: 24px;
       transition: opacity .4s ease;
+      color: #d4a860;
     }
 
     #boot.hide {
@@ -510,30 +587,37 @@
     }
 
     #boot .bar {
-      width: 280px;
-      height: 6px;
-      background: #1a2236;
-      border: 2px solid #2b3a5a;
+      width: 300px;
+      height: 12px;
+      background: #1a0e04;
+      border: 3px solid #2a1808;
+      border-radius: 2px;
+      box-shadow:
+        inset 0 0 0 1px #8a5a2a,
+        0 3px 0 #100804;
+      padding: 2px;
     }
 
     #boot .bar i {
       display: block;
       height: 100%;
       width: 0%;
-      background: #6fa8ff;
+      background: linear-gradient(180deg, #ffe07a 0%, #d4a860 50%, #8a5a2a 100%);
+      box-shadow: 0 0 12px rgba(255, 224, 122, .5);
       transition: width .3s ease;
+      border-radius: 1px;
     }
 
     #boot small {
-      opacity: .5;
+      opacity: .55;
       font-size: 10px;
-      letter-spacing: 1px;
+      letter-spacing: 3px;
     }
 
     #boot .err {
       color: #ff8b8b;
       font-size: 11px;
-      max-width: 340px;
+      max-width: 360px;
       line-height: 1.6;
       text-align: left;
       word-break: break-word;
@@ -542,44 +626,49 @@
 
     #boot .tex-list {
       font-size: 10px;
-      line-height: 1.5;
-      color: rgba(255, 255, 255, .55);
+      line-height: 1.55;
+      color: rgba(255, 255, 255, .6);
       text-align: left;
-      max-width: 300px;
+      max-width: 320px;
       width: 100%;
       font-family: monospace;
-      max-height: 170px;
+      max-height: 180px;
       overflow: hidden;
       margin-top: 6px;
+      background: rgba(0, 0, 0, .3);
+      padding: 8px 10px;
+      border-radius: 3px;
+      border: 1px solid rgba(180, 134, 58, .3);
     }
 
-    #boot .tex-list .ok {
-      color: #7cffa0;
-    }
+    #boot .tex-list .ok   { color: #7cffa0; }
+    #boot .tex-list .miss { color: #ffb84d; }
 
-    #boot .tex-list .miss {
-      color: #ffb84d;
-    }
-
+    /* ============ TOAST ============ */
     #toast {
       position: fixed;
       left: 50%;
       top: 22%;
-      transform: translateX(-50%);
-      font-size: 16px;
-      background: rgba(0, 0, 0, .78);
-      padding: 12px 22px;
-      border-radius: 10px;
+      transform: translate(-50%, -6px);
+      font-size: 15px;
+      background:
+        linear-gradient(180deg, #4a2e14 0%, #2a1808 100%);
+      padding: 12px 24px;
+      border-radius: 4px;
       pointer-events: none;
       opacity: 0;
       transition: opacity .3s, transform .3s;
       color: #ffe07a;
       letter-spacing: 2px;
-      font-weight: bold;
+      font-weight: 900;
       z-index: 50;
-      border: 2px solid rgba(255, 224, 122, .4);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .6);
-      transform: translate(-50%, -6px);
+      border: 3px solid #1a0e04;
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, .85);
+      box-shadow:
+        inset 0 0 0 1px #b8863a,
+        inset 0 3px 0 rgba(255, 220, 150, .2),
+        0 5px 0 #1a0e04,
+        0 10px 24px rgba(0, 0, 0, .7);
     }
 
     #toast.show {
@@ -593,15 +682,16 @@
 
   <div id="game"></div>
 
+  <div id="underwater"></div>
   <div id="crosshair" class="hud-el"></div>
 
   <div id="hud" class="hud-el">
-    <div><span class="k">MODE</span> <span class="v mode" id="hudMode">--</span></div>
-    <div><span class="k">POS </span> <span class="v" id="hudPos">0, 0</span></div>
-    <div><span class="k">ALT </span> <span class="v" id="hudAlt">0</span></div>
-    <div><span class="k">TIME</span> <span class="v" id="hudTime">12:00</span></div>
-    <div><span class="k">WX  </span> <span class="v wx" id="hudWx">CLEAR</span></div>
-    <div><span class="k">FPS </span> <span class="v" id="hudFps">--</span></div>
+    <div class="row"><span class="k">MODE</span><span class="v mode" id="hudMode">--</span></div>
+    <div class="row"><span class="k">POS </span><span class="v" id="hudPos">0, 0</span></div>
+    <div class="row"><span class="k">ALT </span><span class="v" id="hudAlt">0</span></div>
+    <div class="row"><span class="k">TIME</span><span class="v" id="hudTime">12:00</span></div>
+    <div class="row"><span class="k">WX  </span><span class="v wx" id="hudWx">CLEAR</span></div>
+    <div class="row"><span class="k">FPS </span><span class="v fps" id="hudFps">--</span></div>
   </div>
 
   <div id="inv" class="hud-el">
@@ -611,17 +701,18 @@
     <span class="inv-item"><span class="inv-icon chest"></span><span class="v" id="invChests">0</span></span>
   </div>
 
-  <canvas id="minimap" class="hud-el" width="130" height="130"></canvas>
+  <canvas id="minimap" class="hud-el" width="140" height="140"></canvas>
 
   <div id="actionRow" class="hud-el">
     <button id="fpToggle" class="action-btn">VIEW: 3RD</button>
+    <button id="diveBtn" class="action-btn">DIVE</button>
     <button id="musicToggle" class="action-btn music-on">MUSIC: ON</button>
   </div>
 
   <div id="stick">
     <div id="knob"></div>
   </div>
-  <div id="hint" class="hud-el">LEFT = MOVE · RIGHT = LOOK · PINCH = ZOOM · F = 1ST PERSON · M = MUSIC</div>
+  <div id="hint" class="hud-el">WASD/STICK = MOVE · MOUSE/RIGHT = LOOK · F = 1ST PERSON · SPACE = DIVE · M = MUSIC · WHEEL = ZOOM</div>
 
   <div id="menu" class="hidden">
     <div id="menuContent">
@@ -629,7 +720,7 @@
         <span class="line1">GUY</span>
         <span class="line2">THE FOLK VALLEY</span>
       </h1>
-      <span class="splash">now with storms!</span>
+      <span class="splash">now with swimming!</span>
       <button id="playBtn" class="mc-btn play">PLAY</button>
       <button id="modBtn" class="mc-btn modding" disabled>MODDING</button>
       <p class="footer">a small voxel adventure</p>
@@ -654,13 +745,13 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script>
     if (typeof THREE === 'undefined') {
-  document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
-}
+      document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
+    }
   </script>
   <script>
     if (typeof THREE === 'undefined') {
-  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
-}
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
   </script>
 
   <!-- World systems, in load order: terrain → graphics → models -->
@@ -680,14 +771,14 @@ var bootEl=$('boot'), bootMsg=$('bootMsg'), bootBar=$('bootBar'), bootErr=$('boo
 var menuEl=$('menu'), playBtn=$('playBtn'), modBtn=$('modBtn'), modNote=$('modNote'), texStatusEl=$('texStatus');
 var hudMode=$('hudMode'), hudPos=$('hudPos'), hudAlt=$('hudAlt'), hudFps=$('hudFps'), hudWx=$('hudWx');
 var stickEl=$('stick'), knobEl=$('knob'), hintEl=$('hint'), toastEl=$('toast');
-var fpToggleBtn=$('fpToggle'), musicToggleBtn=$('musicToggle');
+var fpToggleBtn=$('fpToggle'), musicToggleBtn=$('musicToggle'), diveBtn=$('diveBtn');
 var invCoins=$('invCoins'), invPotions=$('invPotions'),
     invGems=$('invGems'), invChests=$('invChests');
 var soundtrackEl=$('soundtrack');
 
 function setBoot(p, m){ if(bootBar) bootBar.style.width=p+'%'; if(m&&bootMsg) bootMsg.textContent=m; }
 function failBoot(msg){
-  bootEl.style.background='#1a0a0a';
+  bootEl.style.background='linear-gradient(180deg, #1a0808 0%, #0a0404 100%)';
   bootMsg.textContent='ERROR';
   bootErr.textContent=msg;
 }
@@ -722,9 +813,16 @@ var FP_EYE_HEIGHT = 1.55;
 
 var MUSIC_VOLUME  = 0.42;
 
+/* ============ SWIM CONFIG ============ */
+var SWIM_SURFACE_Y  = -0.35;   /* head above water (SEA_LEVEL is 0) */
+var SWIM_MIN_Y      = -8;      /* deepest dive height */
+var SWIM_DEPTH_MIN  = 1.0;     /* terrain must be this far below sea level to swim */
+var SWIM_SPEED_MULT = 0.55;    /* horizontal speed multiplier while swimming */
+
 var TEX_PATHS = [
   'assets/bg.png',
   'assets/grass.png',
+  'assets/stone.png',       /* <-- new */
   'assets/water.png',
   'assets/tree_bark.png',
   'assets/tree_leaves.png',
@@ -745,7 +843,8 @@ var SEA_LEVEL  = GTF.SEA_LEVEL;
 /* ============================================================ SHARED STATE */
 var player = GTF.player = {
   x:0.5, z:0.5, y:0, vx:0, vz:0,
-  bob:0, moving:false, facing:1, stepTimer:0, inWater:false
+  bob:0, moving:false, facing:1, stepTimer:0, inWater:false,
+  swimming:false, diving:false
 };
 var inventory = GTF.inventory = { coin:0, potion:0, gem:0, chest:0 };
 var cam = GTF.cam = {
@@ -764,7 +863,7 @@ function initAudio() {
   }
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    GTF.audioCtx = audioCtx;   /* graphics.js needs this for thunder + rain ambience */
+    GTF.audioCtx = audioCtx;
   } catch(e) { audioCtx = null; }
 }
 function beep(freq, dur, type, vol) {
@@ -785,15 +884,15 @@ function sfxPickup(){
   setTimeout(function(){ beep(1320, 0.12, 'sine', 0.05); }, 60);
 }
 function sfxStep(){ beep(150 + Math.random()*60, 0.04, 'triangle', 0.018); }
+function sfxSplash(){
+  beep(220, 0.08, 'sine', 0.05);
+  setTimeout(function(){ beep(160, 0.10, 'triangle', 0.04); }, 40);
+}
 
 /* ============================================================ MUSIC */
 var music = {
-  on: true,
-  started: false,
-  available: false,
-  fadeTimer: null,
-  target: MUSIC_VOLUME,
-  current: 0
+  on: true, started: false, available: false,
+  fadeTimer: null, target: MUSIC_VOLUME, current: 0
 };
 
 function probeSoundtrack() {
@@ -846,7 +945,6 @@ function startMusic() {
       fadeMusic(music.on ? music.target : 0, 2.2);
     }).catch(function(err){
       console.warn('[music] blocked: ' + (err && err.message));
-      music.started = false;
     });
   } else {
     music.started = true;
@@ -885,15 +983,31 @@ function findSpawnPoint() {
   }
   return { x: 0.5, z: 0.5, y: Math.max(heightAt(0.5, 0.5), 4) };
 }
-/* Walkable now allows shallow water — depth <= 1.2 units below sea level */
+
+/* walkable() now only blocks sharp terrain steps.
+   Water depth no longer blocks movement — instead the player swims. */
 function walkable(x, z) {
-  var h = heightAt(x, z);
-  if (h < SEA_LEVEL - 1.2) return false;
   var curH = heightAt(player.x, player.z);
-  if (Math.abs(h - curH) > MAX_STEP) return false;
+  var newH = heightAt(x, z);
+  if (Math.abs(newH - curH) > MAX_STEP) return false;
   return true;
 }
+
 function updatePlayer(dt) {
+  /* --- Swim state --- */
+  var terrainHere = heightAt(player.x, player.z);
+  var waterDepth  = SEA_LEVEL - terrainHere;
+  var wasSwimming = player.swimming;
+  player.swimming = waterDepth > SWIM_DEPTH_MIN && player.y < SEA_LEVEL + 0.8;
+  player.inWater  = terrainHere < SEA_LEVEL + 0.1;
+
+  if (player.swimming && !wasSwimming) {
+    /* splash on entry */
+    sfxSplash();
+    GTF.spawnParticles(player.x, SEA_LEVEL + 0.05, player.z, 10, 0xa8d4ff);
+  }
+
+  /* --- Input --- */
   var ix = inputVec.x, iy = inputVec.y;
   if (keys['a'] || keys['arrowleft'])  ix -= 1;
   if (keys['d'] || keys['arrowright']) ix += 1;
@@ -909,19 +1023,21 @@ function updatePlayer(dt) {
   var dLen = Math.sqrt(dirX*dirX + dirZ*dirZ);
   var wantMoving = dLen > 0.01;
 
+  var maxSpeed = player.swimming ? MOVE_MAX * SWIM_SPEED_MULT : MOVE_MAX;
   var tvx = 0, tvz = 0;
   if (wantMoving) {
     dirX /= dLen; dirZ /= dLen;
-    tvx = dirX * MOVE_MAX * mag;
-    tvz = dirZ * MOVE_MAX * mag;
+    tvx = dirX * maxSpeed * mag;
+    tvz = dirZ * maxSpeed * mag;
   }
   var accel = wantMoving ? MOVE_ACCEL : MOVE_FRICTION;
-  player.vx += (tvx - player.vx) * clamp(accel * dt / MOVE_MAX, 0, 1);
-  player.vz += (tvz - player.vz) * clamp(accel * dt / MOVE_MAX, 0, 1);
+  player.vx += (tvx - player.vx) * clamp(accel * dt / maxSpeed, 0, 1);
+  player.vz += (tvz - player.vz) * clamp(accel * dt / maxSpeed, 0, 1);
 
   var spd = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
   if (spd < 0.02) { player.vx = 0; player.vz = 0; spd = 0; }
 
+  /* --- Horizontal motion with wall collision --- */
   if (spd > 0) {
     var steps = 3;
     var stepX = (player.vx * dt) / steps;
@@ -930,23 +1046,50 @@ function updatePlayer(dt) {
       if (walkable(player.x + stepX, player.z)) player.x += stepX; else player.vx = 0;
       if (walkable(player.x, player.z + stepZ)) player.z += stepZ; else player.vz = 0;
     }
-    player.stepTimer -= dt;
-    if (player.stepTimer <= 0 && spd > 2) {
-      player.stepTimer = 0.28;
-      sfxStep();
-      var col = GTF.groundColorAt(player.x, player.z);
-      GTF.spawnParticles(player.x, player.y + 0.15, player.z, 3, col);
+
+    if (!player.swimming) {
+      player.stepTimer -= dt;
+      if (player.stepTimer <= 0 && spd > 2) {
+        player.stepTimer = 0.28;
+        sfxStep();
+        var col = GTF.groundColorAt(player.x, player.z);
+        GTF.spawnParticles(player.x, player.y + 0.15, player.z, 3, col);
+      }
+    } else {
+      /* water ripples while swimming on the surface */
+      player.stepTimer -= dt;
+      if (player.stepTimer <= 0 && spd > 1.2 && !player.diving) {
+        player.stepTimer = 0.30;
+        GTF.spawnParticles(player.x, SEA_LEVEL + 0.05, player.z, 2, 0xa8d4ff);
+      }
     }
   }
 
   if (Math.abs(player.vx) > 0.3) player.facing = player.vx > 0 ? 1 : -1;
-  var targetY = heightAt(player.x, player.z);
-  if (targetY < SEA_LEVEL - 0.3) targetY = SEA_LEVEL - 0.3;
-  player.y = lerp(player.y, targetY, 1 - Math.pow(0.0005, dt));
+
+  /* --- Vertical --- */
+  var divingInput = keys[' '] || keys['space'] || keys['shift'] || divePressed;
+  player.diving = !!(player.swimming && divingInput);
+
+  if (player.swimming) {
+    var diveTarget;
+    if (player.diving) {
+      /* descend until we touch the seafloor or the max depth */
+      diveTarget = Math.max(terrainHere + 0.6, SWIM_MIN_Y);
+    } else {
+      /* float at the surface, head out of water */
+      diveTarget = Math.max(terrainHere + 0.6, SWIM_SURFACE_Y);
+    }
+    var k = player.y < diveTarget ? 2.2 : 1.8;   /* sink a bit faster than float */
+    player.y += (diveTarget - player.y) * Math.min(1, dt * k);
+  } else {
+    var targetY = terrainHere;
+    if (targetY < SWIM_SURFACE_Y) targetY = SWIM_SURFACE_Y;
+    player.y = lerp(player.y, targetY, 1 - Math.pow(0.0005, dt));
+  }
 
   player.moving = spd > 0.4;
-  player.bob += dt * (player.moving ? 11 : 0);
-  player.inWater = targetY < SEA_LEVEL + 0.1;
+  player.bob += dt * (player.moving ? (player.swimming ? 6 : 11) : 0);
 }
 
 /* ============================================================ CAMERA */
@@ -965,6 +1108,7 @@ function updateCamera(dt, immediate) {
   var lookDirZ = -Math.cos(cam.yaw) * cp;
 
   if (cam.fp) {
+    /* First person: eye sits at head height. Underwater when swimming deep. */
     var eyeY = player.y + FP_EYE_HEIGHT;
     if (immediate) camera.position.set(player.x, eyeY, player.z);
     else {
@@ -983,9 +1127,14 @@ function updateCamera(dt, immediate) {
     var camTX = player.x - lookDirX * cam.dist;
     var camTY = eyeY2 - lookDirY * cam.dist;
     var camTZ = player.z - lookDirZ * cam.dist;
-    var groundY = heightAt(camTX, camTZ) + 1.2;
-    if (camTY < groundY) camTY = groundY;
-    if (camTY < SEA_LEVEL + 1.5) camTY = SEA_LEVEL + 1.5;
+
+    /* Only apply ground/sea clamp when NOT deep-diving in 3rd person. */
+    if (!player.diving) {
+      var groundY = heightAt(camTX, camTZ) + 1.2;
+      if (camTY < groundY) camTY = groundY;
+      if (camTY < SEA_LEVEL + 0.6) camTY = SEA_LEVEL + 0.6;
+    }
+
     if (immediate) camera.position.set(camTX, camTY, camTZ);
     else {
       var k2 = 1 - Math.pow(0.003, dt);
@@ -1012,36 +1161,59 @@ function setFpMode(on) {
   console.log('[camera] ' + (cam.fp ? 'first' : 'third') + ' person');
 }
 
-/* ============================================================ INPUT */
+/* ============================================================ INPUT
+   Rewritten so move and look can coexist on both desktop and touch.
+
+   Priority on pointerdown:
+     1. touch on left half (only when no move stick is active) → move stick
+     2. anything else while look is free → look pointer
+     3. third pointer while both are taken → pinch partner
+
+   The old code pushed to `pinch` on every pointerdown, which meant the
+   very first tap filled the pinch slot and any second tap failed the
+   `pinch.length < 2` check, so you could never look while moving.  That
+   check is gone now.
+*/
 var keys = {};
 var inputVec = { x:0, y:0 };
 var movePointer = null, lookPointer = null;
 var stickCenter = { x:0, y:0 };
 var lookLastX = 0, lookLastY = 0;
-var STICK_R = 52;
+var STICK_R = 55;
 var pinch = [];
+var divePressed = false;
 
 document.addEventListener('pointerdown', function(e){
   initAudio();
   if (e.pointerType === 'mouse' && e.button !== 0) return;
-  if (pinch.length < 2) pinch.push({ id: e.pointerId, x: e.clientX, y: e.clientY });
-  if (e.clientX < window.innerWidth * 0.5 && movePointer === null && pinch.length < 2) {
+
+  var isTouch = (e.pointerType === 'touch' || e.pointerType === 'pen');
+  var leftHalf = e.clientX < window.innerWidth * 0.45;
+
+  if (isTouch && movePointer === null && leftHalf) {
+    /* start the on-screen stick */
     movePointer = e.pointerId;
     stickCenter.x = e.clientX; stickCenter.y = e.clientY;
     stickEl.style.left = e.clientX + 'px';
     stickEl.style.top  = e.clientY + 'px';
     stickEl.style.display = 'block';
-    knobEl.style.left = '60px'; knobEl.style.top = '60px';
+    knobEl.style.left = '65px'; knobEl.style.top = '65px';
     hideHint();
-  } else if (lookPointer === null && pinch.length < 2) {
+  } else if (lookPointer === null) {
+    /* desktop: any click; touch: right half (or left if the stick is taken) */
     lookPointer = e.pointerId;
     lookLastX = e.clientX;
     lookLastY = e.clientY;
     hideHint();
+  } else if (pinch.length < 2) {
+    /* third finger becomes a pinch partner for zoom */
+    pinch.push({ id: e.pointerId, x: e.clientX, y: e.clientY });
+    window.__pinchStart = undefined;
   }
 }, { passive:false });
 
 document.addEventListener('pointermove', function(e){
+  /* pinch bookkeeping */
   for (var i = 0; i < pinch.length; i++) {
     if (pinch[i].id === e.pointerId) { pinch[i].x = e.clientX; pinch[i].y = e.clientY; }
   }
@@ -1051,8 +1223,9 @@ document.addEventListener('pointermove', function(e){
       window.__pinchStart = d;
       window.__pinchCamStart = cam.dist;
     }
-    cam.dist = clamp(window.__pinchCamStart * (window.__pinchStart / d), CAM_DIST_MIN, CAM_DIST_MAX);
+    cam.dist = clamp(window.__pinchCamStart * (window.__pinchStart / Math.max(1, d)), CAM_DIST_MIN, CAM_DIST_MAX);
   }
+
   if (e.pointerId === movePointer) {
     var dx = e.clientX - stickCenter.x;
     var dy = e.clientY - stickCenter.y;
@@ -1060,8 +1233,8 @@ document.addEventListener('pointermove', function(e){
     var clamped = Math.min(len, STICK_R);
     var nx = len > 0.001 ? dx/len : 0;
     var ny = len > 0.001 ? dy/len : 0;
-    knobEl.style.left = (60 + nx*clamped) + 'px';
-    knobEl.style.top  = (60 + ny*clamped) + 'px';
+    knobEl.style.left = (65 + nx*clamped) + 'px';
+    knobEl.style.top  = (65 + ny*clamped) + 'px';
     var s = clamped / STICK_R;
     inputVec.x = nx * s; inputVec.y = ny * s;
   } else if (e.pointerId === lookPointer) {
@@ -1080,6 +1253,7 @@ function endPointer(e){
     if (pinch[i].id === e.pointerId) { pinch.splice(i,1); break; }
   }
   if (pinch.length < 2) window.__pinchStart = undefined;
+
   if (e.pointerId === movePointer) {
     movePointer = null; inputVec.x = 0; inputVec.y = 0;
     stickEl.style.display = 'none';
@@ -1089,15 +1263,35 @@ function endPointer(e){
 }
 document.addEventListener('pointerup', endPointer, { passive:false });
 document.addEventListener('pointercancel', endPointer, { passive:false });
+
 document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+/* desktop wheel zoom */
+window.addEventListener('wheel', function(e){
+  cam.dist = clamp(cam.dist + e.deltaY * 0.012, CAM_DIST_MIN, CAM_DIST_MAX);
+}, { passive: true });
+
 window.addEventListener('keydown', function(e){
   keys[e.key.toLowerCase()] = true;
+  /* prevent page scroll on spacebar */
+  if (e.key === ' ' || e.key === 'Spacebar') e.preventDefault();
   if (e.key === 'f' || e.key === 'F') setFpMode(!cam.fp);
   if (e.key === 'm' || e.key === 'M') setMusic(!music.on);
 });
 window.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; });
+
 fpToggleBtn.addEventListener('click', function(){ setFpMode(!cam.fp); });
 if (musicToggleBtn) musicToggleBtn.addEventListener('click', function(){ setMusic(!music.on); });
+
+/* Dive button (mobile). Hold to descend. */
+function diveDown(ev){ if (ev) ev.preventDefault(); divePressed = true; if (diveBtn) diveBtn.classList.add('dive-active'); }
+function diveUp(ev){ divePressed = false; if (diveBtn) diveBtn.classList.remove('dive-active'); }
+if (diveBtn) {
+  diveBtn.addEventListener('pointerdown', diveDown, { passive:false });
+  diveBtn.addEventListener('pointerup', diveUp, { passive:false });
+  diveBtn.addEventListener('pointerleave', diveUp, { passive:false });
+  diveBtn.addEventListener('pointercancel', diveUp, { passive:false });
+}
 
 var hintHidden = false;
 function hideHint(){ if (!hintHidden) { hintHidden = true; hintEl.style.opacity = '0'; } }
@@ -1110,6 +1304,30 @@ function updateHud() {
   invPotions.textContent = inventory.potion;
   invGems.textContent = inventory.gem;
   invChests.textContent = inventory.chest;
+}
+
+/* ============================================================ UNDERWATER EFFECT */
+var underwaterEl = document.getElementById('underwater');
+var _uwActive = false;
+function applyUnderwater(dt) {
+  var camera = GTF.camera;
+  if (!camera) return;
+  var uw = camera.position.y < SEA_LEVEL;
+  if (uw !== _uwActive) {
+    _uwActive = uw;
+    if (uw) document.body.classList.add('underwater');
+    else document.body.classList.remove('underwater');
+  }
+  if (uw && GTF.scene && GTF.scene.fog) {
+    var depth = clamp((SEA_LEVEL - camera.position.y) / 6, 0, 1);
+    GTF.scene.fog.color.setRGB(
+      lerp(GTF.scene.fog.color.r, 0.03, depth * 0.7),
+      lerp(GTF.scene.fog.color.g, 0.14, depth * 0.7),
+      lerp(GTF.scene.fog.color.b, 0.28, depth * 0.7)
+    );
+    GTF.scene.fog.density = Math.max(GTF.scene.fog.density, 0.055 + depth * 0.05);
+    if (GTF.renderer) GTF.renderer.setClearColor(GTF.scene.fog.color, 1);
+  }
 }
 
 /* ============================================================ LOOP */
@@ -1128,7 +1346,7 @@ function loop(now) {
   GTF.updateChunks(false);
   GTF.processChunkQueue(8);
 
-  /* water plane follows the player in big steps (waves are shader-driven) */
+  /* water plane follows the player in big steps */
   if (GTF.waterPlane) {
     var snapX = Math.round(player.x / 60) * 60;
     var snapZ = Math.round(player.z / 60) * 60;
@@ -1136,13 +1354,21 @@ function loop(now) {
   }
 
   GTF.updateDayNight(dt);
+  applyUnderwater(dt);
+
   GTF.updateClouds(dt);
   GTF.updateBirds(dt, now / 1000);
   GTF.updateParticles(dt);
 
   if (GTF.playerSprite && !cam.fp) {
     var bobY = player.moving ? Math.abs(Math.sin(player.bob)) * 0.10 : 0;
-    GTF.playerSprite.position.set(player.x, player.y + bobY, player.z);
+    var spriteY = player.y + bobY;
+    if (player.swimming) {
+      /* dunk the sprite a bit so the head sits just above the waterline */
+      var submerge = clamp((SEA_LEVEL - player.y) / 2.5, 0, 1.1);
+      spriteY -= submerge;
+    }
+    GTF.playerSprite.position.set(player.x, spriteY, player.z);
     var bsx = GTF.playerSprite.userData.baseScaleX || 1.2;
     var bsy = GTF.playerSprite.userData.baseScaleY || 1.8;
     GTF.playerSprite.scale.set(bsx * player.facing, bsy, 1);
@@ -1175,7 +1401,6 @@ function loop(now) {
     }
   });
 
-  /* dramatic render: sky, planar reflections, weather, bloom, ACES */
   GTF.renderFrame(dt);
 
   fpsAccum += dt; fpsFrames++;
@@ -1308,7 +1533,7 @@ function boot() {
           }, false);
           renderer.domElement.addEventListener('webglcontextrestored', function(){
             contextLost = false;
-            hudMode.textContent = 'WEBGL 3D'; hudMode.style.color = '#7cffa0';
+            hudMode.textContent = 'WEBGL 3D'; hudMode.style.color = '#8affb0';
             if (GTF.onResize) GTF.onResize();
           }, false);
 
@@ -1320,12 +1545,11 @@ function boot() {
               if (GTF.chunks.has(job.key)) continue;
               GTF.chunks.set(job.key, GTF.buildChunk(job.cx, job.cz));
             }
-            /* one full dramatic frame so the menu backdrop is lit properly */
             GTF.updateDayNight(0.016);
             GTF.renderFrame(0.016);
 
             hudMode.textContent = 'WEBGL 3D';
-            hudMode.style.color = '#7cffa0';
+            hudMode.style.color = '#8affb0';
             if (hudWx) hudWx.textContent = (GTF.weather && GTF.weather.type ? GTF.weather.type : 'clear').toUpperCase();
             updateHud();
             GTF.drawMinimap();
