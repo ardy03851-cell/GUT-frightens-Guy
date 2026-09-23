@@ -78,6 +78,10 @@
       color: #7cffa0;
     }
 
+    #hud .wx {
+      color: #9fe8ff;
+    }
+
     #inv {
       position: fixed;
       top: calc(env(safe-area-inset-top, 0px) + 10px);
@@ -192,6 +196,8 @@
       transition: opacity .8s;
       z-index: 5;
       border: 1px solid rgba(255, 255, 255, .1);
+      text-align: center;
+      max-width: 92vw;
     }
 
     #actionRow {
@@ -234,6 +240,10 @@
 
     .action-btn.fp-on {
       background: linear-gradient(#c47b3a, #7a4a20);
+    }
+
+    .action-btn.music-on {
+      background: linear-gradient(#4aa86a, #256b3f);
     }
 
     #crosshair {
@@ -465,6 +475,7 @@
       letter-spacing: 1px;
       white-space: nowrap;
       text-shadow: 1px 1px 0 rgba(0, 0, 0, .9);
+      text-align: center;
     }
 
     #menu .tex-status .ok {
@@ -537,7 +548,7 @@
       max-width: 300px;
       width: 100%;
       font-family: monospace;
-      max-height: 150px;
+      max-height: 170px;
       overflow: hidden;
       margin-top: 6px;
     }
@@ -589,6 +600,7 @@
     <div><span class="k">POS </span> <span class="v" id="hudPos">0, 0</span></div>
     <div><span class="k">ALT </span> <span class="v" id="hudAlt">0</span></div>
     <div><span class="k">TIME</span> <span class="v" id="hudTime">12:00</span></div>
+    <div><span class="k">WX  </span> <span class="v wx" id="hudWx">CLEAR</span></div>
     <div><span class="k">FPS </span> <span class="v" id="hudFps">--</span></div>
   </div>
 
@@ -603,12 +615,13 @@
 
   <div id="actionRow" class="hud-el">
     <button id="fpToggle" class="action-btn">VIEW: 3RD</button>
+    <button id="musicToggle" class="action-btn music-on">MUSIC: ON</button>
   </div>
 
   <div id="stick">
     <div id="knob"></div>
   </div>
-  <div id="hint" class="hud-el">LEFT = MOVE · RIGHT = LOOK · PINCH = ZOOM · F = 1ST PERSON</div>
+  <div id="hint" class="hud-el">LEFT = MOVE · RIGHT = LOOK · PINCH = ZOOM · F = 1ST PERSON · M = MUSIC</div>
 
   <div id="menu" class="hidden">
     <div id="menuContent">
@@ -616,7 +629,7 @@
         <span class="line1">GUY</span>
         <span class="line2">THE FOLK VALLEY</span>
       </h1>
-      <span class="splash">now with crystals!</span>
+      <span class="splash">now with storms!</span>
       <button id="playBtn" class="mc-btn play">PLAY</button>
       <button id="modBtn" class="mc-btn modding" disabled>MODDING</button>
       <p class="footer">a small voxel adventure</p>
@@ -634,6 +647,9 @@
   </div>
 
   <div id="toast"></div>
+
+  <!-- Background soundtrack (loops while you play) -->
+  <audio id="soundtrack" src="assets/soundtrack1.mp3" loop preload="auto" crossorigin="anonymous"></audio>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script>
@@ -662,11 +678,12 @@ var GTF = window.GTF = window.GTF || {};
 var $ = function(id){ return document.getElementById(id); };
 var bootEl=$('boot'), bootMsg=$('bootMsg'), bootBar=$('bootBar'), bootErr=$('bootErr'), bootTexList=$('bootTexList');
 var menuEl=$('menu'), playBtn=$('playBtn'), modBtn=$('modBtn'), modNote=$('modNote'), texStatusEl=$('texStatus');
-var hudMode=$('hudMode'), hudPos=$('hudPos'), hudAlt=$('hudAlt'), hudFps=$('hudFps');
+var hudMode=$('hudMode'), hudPos=$('hudPos'), hudAlt=$('hudAlt'), hudFps=$('hudFps'), hudWx=$('hudWx');
 var stickEl=$('stick'), knobEl=$('knob'), hintEl=$('hint'), toastEl=$('toast');
-var fpToggleBtn=$('fpToggle');
+var fpToggleBtn=$('fpToggle'), musicToggleBtn=$('musicToggle');
 var invCoins=$('invCoins'), invPotions=$('invPotions'),
     invGems=$('invGems'), invChests=$('invChests');
+var soundtrackEl=$('soundtrack');
 
 function setBoot(p, m){ if(bootBar) bootBar.style.width=p+'%'; if(m&&bootMsg) bootMsg.textContent=m; }
 function failBoot(msg){
@@ -702,6 +719,8 @@ var PITCH_MAX_TP =  0.55;
 var PITCH_MIN_FP = -1.45;
 var PITCH_MAX_FP =  1.45;
 var FP_EYE_HEIGHT = 1.55;
+
+var MUSIC_VOLUME  = 0.42;
 
 var TEX_PATHS = [
   'assets/bg.png',
@@ -739,9 +758,14 @@ var cam = GTF.cam = {
 /* ============================================================ AUDIO */
 var audioCtx = null;
 function initAudio() {
-  if (audioCtx) return;
-  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-  catch(e) { audioCtx = null; }
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch(e){} }
+    return;
+  }
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    GTF.audioCtx = audioCtx;   /* graphics.js needs this for thunder + rain ambience */
+  } catch(e) { audioCtx = null; }
 }
 function beep(freq, dur, type, vol) {
   if (!audioCtx) return;
@@ -761,6 +785,90 @@ function sfxPickup(){
   setTimeout(function(){ beep(1320, 0.12, 'sine', 0.05); }, 60);
 }
 function sfxStep(){ beep(150 + Math.random()*60, 0.04, 'triangle', 0.018); }
+
+/* ============================================================ MUSIC */
+var music = {
+  on: true,
+  started: false,
+  available: false,
+  fadeTimer: null,
+  target: MUSIC_VOLUME,
+  current: 0
+};
+
+function probeSoundtrack() {
+  return new Promise(function(resolve){
+    if (!soundtrackEl) { resolve(false); return; }
+    var done = false;
+    var t = setTimeout(function(){
+      if (!done) { done = true; resolve(false); }
+    }, 6000);
+    soundtrackEl.addEventListener('canplaythrough', function(){
+      if (done) return; done = true; clearTimeout(t); resolve(true);
+    }, { once:true });
+    soundtrackEl.addEventListener('error', function(){
+      if (done) return; done = true; clearTimeout(t); resolve(false);
+    }, { once:true });
+    try { soundtrackEl.load(); } catch(e) {}
+  });
+}
+
+function fadeMusic(to, seconds) {
+  if (!soundtrackEl) return;
+  clearInterval(music.fadeTimer);
+  var from = music.current;
+  var steps = Math.max(1, Math.round(seconds * 20));
+  var i = 0;
+  music.fadeTimer = setInterval(function(){
+    i++;
+    var k = i / steps;
+    if (k >= 1) {
+      music.current = to;
+      soundtrackEl.volume = clamp(to, 0, 1);
+      clearInterval(music.fadeTimer);
+      if (to <= 0.001) { try { soundtrackEl.pause(); } catch(e){} }
+      return;
+    }
+    music.current = from + (to - from) * k;
+    soundtrackEl.volume = clamp(music.current, 0, 1);
+  }, 50);
+}
+
+function startMusic() {
+  if (!soundtrackEl || !music.available) return;
+  soundtrackEl.loop = true;
+  soundtrackEl.volume = 0;
+  music.current = 0;
+  var p = soundtrackEl.play();
+  if (p && p.then) {
+    p.then(function(){
+      music.started = true;
+      fadeMusic(music.on ? music.target : 0, 2.2);
+    }).catch(function(err){
+      console.warn('[music] blocked: ' + (err && err.message));
+      music.started = false;
+    });
+  } else {
+    music.started = true;
+    fadeMusic(music.on ? music.target : 0, 2.2);
+  }
+}
+
+function setMusic(on) {
+  music.on = !!on;
+  if (musicToggleBtn) {
+    musicToggleBtn.textContent = music.on ? 'MUSIC: ON' : 'MUSIC: OFF';
+    if (music.on) musicToggleBtn.classList.add('music-on');
+    else musicToggleBtn.classList.remove('music-on');
+  }
+  if (!music.available) { toast('No soundtrack found', 1200); return; }
+  if (music.on) {
+    if (!music.started) startMusic();
+    else fadeMusic(music.target, 1.1);
+  } else {
+    fadeMusic(0, 0.8);
+  }
+}
 
 /* ============================================================ PLAYER */
 function findSpawnPoint() {
@@ -985,9 +1093,11 @@ document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
 window.addEventListener('keydown', function(e){
   keys[e.key.toLowerCase()] = true;
   if (e.key === 'f' || e.key === 'F') setFpMode(!cam.fp);
+  if (e.key === 'm' || e.key === 'M') setMusic(!music.on);
 });
 window.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; });
 fpToggleBtn.addEventListener('click', function(){ setFpMode(!cam.fp); });
+if (musicToggleBtn) musicToggleBtn.addEventListener('click', function(){ setMusic(!music.on); });
 
 var hintHidden = false;
 function hideHint(){ if (!hintHidden) { hintHidden = true; hintEl.style.opacity = '0'; } }
@@ -1018,14 +1128,11 @@ function loop(now) {
   GTF.updateChunks(false);
   GTF.processChunkQueue(8);
 
+  /* water plane follows the player in big steps (waves are shader-driven) */
   if (GTF.waterPlane) {
     var snapX = Math.round(player.x / 60) * 60;
     var snapZ = Math.round(player.z / 60) * 60;
     GTF.waterPlane.position.set(snapX, SEA_LEVEL, snapZ);
-    if (GTF.waterMaterial.map) {
-      GTF.waterMaterial.map.offset.x = (now * 0.00004) % 1;
-      GTF.waterMaterial.map.offset.y = (now * 0.00003) % 1;
-    }
   }
 
   GTF.updateDayNight(dt);
@@ -1068,7 +1175,8 @@ function loop(now) {
     }
   });
 
-  GTF.renderer.render(GTF.scene, GTF.camera);
+  /* dramatic render: sky, planar reflections, weather, bloom, ACES */
+  GTF.renderFrame(dt);
 
   fpsAccum += dt; fpsFrames++;
   if (fpsAccum >= 0.5) {
@@ -1081,13 +1189,13 @@ function loop(now) {
 
 window.addEventListener('resize', function(){
   var renderer = GTF.renderer, camera = GTF.camera;
-  if (renderer && camera) {
-    var pr = Math.min(window.devicePixelRatio||1, inIframe ? 1 : 1.5);
-    renderer.setPixelRatio(pr);
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-  }
+  if (!renderer || !camera) return;
+  var pr = Math.min(window.devicePixelRatio||1, inIframe ? 1 : 1.5);
+  renderer.setPixelRatio(pr);
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  if (GTF.onResize) GTF.onResize();
 });
 
 /* ============================================================ MENU HANDLERS */
@@ -1103,6 +1211,7 @@ playBtn.addEventListener('click', function(){
   setTimeout(function(){
     if (menuEl.parentNode) menuEl.parentNode.removeChild(menuEl);
   }, 500);
+  startMusic();
   lastTime = performance.now();
   requestAnimationFrame(loop);
   setFpMode(false);
@@ -1116,7 +1225,13 @@ function boot() {
   }
   setBoot(5, 'CHECKING TEXTURES…');
 
-  GTF.probeAllTextures(TEX_PATHS).then(function(texMap){
+  Promise.all([
+    GTF.probeAllTextures(TEX_PATHS),
+    probeSoundtrack()
+  ]).then(function(res){
+    var texMap = res[0];
+    music.available = !!res[1];
+
     var found = 0;
     var statusHtml = '';
     console.log('[textures] probing ' + TEX_PATHS.length + ' files:');
@@ -1131,11 +1246,22 @@ function boot() {
         statusHtml += '<div><span class="miss">✗</span> ' + p.replace('assets/', '') + '  (' + (r.reason || 'missing') + ')</div>';
       }
     });
+
+    if (music.available) {
+      console.log('  ✓ assets/soundtrack1.mp3');
+      statusHtml += '<div><span class="ok">♪</span> soundtrack1.mp3  (looping)</div>';
+    } else {
+      console.warn('  ✗ assets/soundtrack1.mp3 (missing — game runs silently)');
+      statusHtml += '<div><span class="miss">♪</span> soundtrack1.mp3  (not found)</div>';
+      if (musicToggleBtn) musicToggleBtn.textContent = 'MUSIC: N/A';
+    }
+
     bootTexList.innerHTML = statusHtml;
     var missCount = TEX_PATHS.length - found;
     console.log('[textures] ' + found + '/' + TEX_PATHS.length + ' found');
     texStatusEl.innerHTML = '<span class="ok">' + found + ' ok</span>' +
-      (missCount > 0 ? ' · <span class="miss">' + missCount + ' fallback</span>' : '');
+      (missCount > 0 ? ' · <span class="miss">' + missCount + ' fallback</span>' : '') +
+      (music.available ? ' · <span class="ok">♪ music</span>' : ' · <span class="miss">♪ none</span>');
 
     setBoot(20, 'CREATING RENDERER…');
     setTimeout(function(){
@@ -1183,6 +1309,7 @@ function boot() {
           renderer.domElement.addEventListener('webglcontextrestored', function(){
             contextLost = false;
             hudMode.textContent = 'WEBGL 3D'; hudMode.style.color = '#7cffa0';
+            if (GTF.onResize) GTF.onResize();
           }, false);
 
           setBoot(75, 'GENERATING CHUNKS…');
@@ -1193,10 +1320,13 @@ function boot() {
               if (GTF.chunks.has(job.key)) continue;
               GTF.chunks.set(job.key, GTF.buildChunk(job.cx, job.cz));
             }
-            renderer.render(scene, camera);
+            /* one full dramatic frame so the menu backdrop is lit properly */
+            GTF.updateDayNight(0.016);
+            GTF.renderFrame(0.016);
 
             hudMode.textContent = 'WEBGL 3D';
             hudMode.style.color = '#7cffa0';
+            if (hudWx) hudWx.textContent = (GTF.weather && GTF.weather.type ? GTF.weather.type : 'clear').toUpperCase();
             updateHud();
             GTF.drawMinimap();
             setBoot(100, 'READY');
