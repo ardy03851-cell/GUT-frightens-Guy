@@ -1,8 +1,12 @@
 /* terrain.js — pure data, math, and geometry for the world.
-   Expanded world: mesas, badlands terraces, deep canyons, ravines,
-   cave sinkholes (with cave-mouth geometry), natural stone arches,
-   hoodoos, cliff overhangs (cliffhangers), floating rocks, boulders,
-   and per-vertex stone-blending so grass and stone textures mix. */
+   REVISED v2:
+     - Removed ravines entirely (they were slicing the map into islands)
+     - Canyons reduced ~3x in width and depth, and only carve on high land
+     - Mesas / badlands made rare (roughly 8% of the map combined)
+     - Caves enlarged (radius 4.5-6.5, depth 8-12) and fewer, so each one
+       reads as a proper sinkhole instead of an ambiguous crater
+     - Cave interiors get a much stronger dark tint for visibility
+   Depends on nothing — loaded before graphics.js. */
 (function () {
 'use strict';
 var GTF = window.GTF = window.GTF || {};
@@ -59,12 +63,12 @@ GTF.VIEW_RADIUS = VIEW_RADIUS;
 GTF.UV_SCALE = UV_SCALE;
 GTF.SEA_LEVEL = SEA_LEVEL;
 
-/* ============================================================ CAVE SYSTEM */
-/* Caves are a grid of sinkholes carved into the terrain.
-   Each 12-unit grid cell may host one cave. The sinkhole is what makes
-   the cave visible — a deep pit with rock rim, stalactites and
-   stalagmites spawned as separate geometry. */
-var CAVE_GRID = 12;
+/* ============================================================ CAVE SYSTEM
+   Caves are carved as deep sinkholes at sparse points on the map.
+   Larger and rarer than v1 so they're actually findable as one distinct
+   "wow" moment instead of scattered ambiguous pits.
+*/
+var CAVE_GRID = 15;
 var _caveCache = new Map();
 
 function getCaveInfo(gx, gz) {
@@ -72,16 +76,18 @@ function getCaveInfo(gx, gz) {
   var info = _caveCache.get(key);
   if (info !== undefined) return info;
 
+  /* ~45% of cells host a cave — noticeably sparse so they stand out */
   var r = hash2(gx, gz, SEED + 12100);
-  if (r < 0.62) { _caveCache.set(key, null); return null; }   /* 38% of cells host a cave */
+  if (r < 0.55) { _caveCache.set(key, null); return null; }
 
-  /* reject caves too close to origin so spawn area is safe */
-  var cx = Math.round(gx * CAVE_GRID + CAVE_GRID * 0.5 + (hash2(gx, gz, 12101) - 0.5) * 6);
-  var cz = Math.round(gz * CAVE_GRID + CAVE_GRID * 0.5 + (hash2(gx, gz, 12102) - 0.5) * 6);
-  if (cx * cx + cz * cz < 40 * 40) { _caveCache.set(key, null); return null; }
+  var cx = Math.round(gx * CAVE_GRID + CAVE_GRID * 0.5 + (hash2(gx, gz, 12101) - 0.5) * 5);
+  var cz = Math.round(gz * CAVE_GRID + CAVE_GRID * 0.5 + (hash2(gx, gz, 12102) - 0.5) * 5);
 
-  var radius = 2.4 + hash2(gx, gz, 12103) * 1.8;
-  var depth  = 4.5 + hash2(gx, gz, 12104) * 3.5;
+  /* keep the spawn area clean */
+  if (cx * cx + cz * cz < 50 * 50) { _caveCache.set(key, null); return null; }
+
+  var radius = 4.5 + hash2(gx, gz, 12103) * 2.0;   /* 4.5 – 6.5  */
+  var depth  = 8.0 + hash2(gx, gz, 12104) * 4.0;   /* 8.0 – 12.0 */
   info = { x: cx, z: cz, r: radius, d: depth, gx: gx, gz: gz };
   _caveCache.set(key, info);
   if (_caveCache.size > 40000) _caveCache.clear();
@@ -97,92 +103,79 @@ function caveCarveAt(x, z) {
   var r2 = info.r * info.r;
   if (dist2 > r2) return 0;
   var t = 1 - Math.sqrt(dist2) / info.r;
-  /* steep-sided sinkhole: most of the depth appears in the inner 60% */
-  var shape = smoothstep(0, 0.62, t);
+  /* steep-sided bowl: most of the depth happens in the inner 55% */
+  var shape = smoothstep(0.0, 0.55, t);
   return shape * info.d;
 }
 
 /* ============================================================ TERRAIN
-   Layers (bottom to top of stack):
-     - continents (very slow)
-     - rolling hills
-     - mountain ridges (ridged noise)
-     - mesas: flat-topped buttes with sheer sides (Monument Valley)
-     - badlands: terraced stepped cliffs
-     - deep canyons and narrow ravines
-     - cave sinkholes (pit carved by caveCarveAt)
-     - detail noise
+   Layers (from low to high influence):
+     - continents (very slow base shape)
+     - mountains (ridged noise, only above a continent threshold)
+     - mesas (rare flat-topped buttes)
+     - badlands (rare stepped terraces)
+     - one narrow canyon slot (very shallow, only on high land)
+     - cave sinkholes (carved)
+     - rolling hills + fine detail
 */
 function baseHeight(x, z) {
   var d = Math.sqrt(x * x + z * z);
-  var spawnBoost = Math.max(0, 1 - d / 50) * 3.0;
+  var spawnBoost = Math.max(0, 1 - d / 60) * 3.5;
 
-  /* Continents */
+  /* ---- Continents: the dominant land/sea shape ---- */
   var cont = fbm(x * 0.006, z * 0.006, SEED, 4);
   var land = (cont - 0.34) * 30 + 1.5 + spawnBoost;
 
-  /* Mountains (ridged) */
+  /* ---- Mountains: only form well inland ---- */
   var r = fbm(x * 0.011, z * 0.011, SEED + 555, 3);
   var ridged = 1 - Math.abs(r * 2 - 1);
   ridged = ridged * ridged;
-  var mountainAmp = Math.max(0, (cont - 0.48) * 5);
-  var mountain = ridged * 22 * mountainAmp;
+  var mountainAmp = Math.max(0, (cont - 0.50) * 5);
+  var mountain = ridged * 20 * mountainAmp;
 
-  /* ---- Mesas: flat-topped plateaus with abrupt vertical edges ---- */
-  var mesaN = fbm(x * 0.013, z * 0.013, SEED + 3333, 3);
+  /* ---- Mesas: rare flat-topped buttes ---- */
+  var mesaN = fbm(x * 0.010, z * 0.010, SEED + 3333, 3);
   var mesa = 0;
-  if (mesaN > 0.575) {
-    /* very tight threshold window = near-vertical walls */
-    var mt = smoothstep(0.575, 0.615, mesaN);
-    mesa = mt * 11.5;
-    /* faint terracing on the top surface */
+  if (mesaN > 0.70) {
+    var mt = smoothstep(0.70, 0.74, mesaN);
+    mesa = mt * 8.5;
+    /* very subtle surface terracing for that sandstone-shelf look */
     var cap = fbm(x * 0.09, z * 0.09, SEED + 3334, 2);
-    mesa += Math.floor(cap * 3) * 0.35 * mt;
+    mesa += Math.floor(cap * 3) * 0.20 * mt;
   }
 
-  /* ---- Badlands: stacked, terrace-like cliffs ---- */
-  var badN = fbm(x * 0.021, z * 0.021, SEED + 4444, 3);
+  /* ---- Badlands: rare stepped terraces ---- */
+  var badN = fbm(x * 0.018, z * 0.018, SEED + 4444, 3);
   var badlands = 0;
-  if (badN > 0.60) {
-    var bt = smoothstep(0.60, 0.68, badN);
-    var steps = 7;
-    var sn = fbm(x * 0.048, z * 0.048, SEED + 4445, 2) * steps;
+  if (badN > 0.74) {
+    var bt = smoothstep(0.74, 0.80, badN);
+    var steps = 5;
+    var sn = fbm(x * 0.045, z * 0.045, SEED + 4445, 2) * steps;
     var stepIdx = Math.floor(sn);
     var stepFrac = sn - stepIdx;
-    /* steep staircase: flat treads with sharp risers */
     var sharp = stepFrac < 0.78 ? 0 : (stepFrac - 0.78) / 0.22;
-    badlands = (stepIdx + sharp) * 0.85 * bt;
+    badlands = (stepIdx + sharp) * 0.65 * bt;
   }
 
-  /* ---- Deep canyons (wide V profiles) ---- */
-  var canyonN = fbm(x * 0.022, z * 0.022, SEED + 5555, 3);
+  /* ---- Canyons: one narrow slot. Rare and shallow. ---- */
+  var canyonN = fbm(x * 0.018, z * 0.018, SEED + 5555, 3);
   var distToLine = Math.abs(canyonN - 0.5);
   var canyonCut = 0;
-  if (distToLine < 0.032) {
-    var cn = (1 - distToLine / 0.032);
-    canyonCut = cn * cn * cn * 13.0;
-    canyonCut *= smoothstep(0.1, 0.5, land);
-  }
-
-  /* ---- Ravines (narrow, deeper gorges) ---- */
-  var ravineN = fbm(x * 0.017, z * 0.017, SEED + 6666, 3);
-  var ravineDist = Math.abs(ravineN - 0.42);
-  var ravineCut = 0;
-  if (ravineDist < 0.017) {
-    var rn = (1 - ravineDist / 0.017);
-    ravineCut = rn * rn * 9.0;
-    ravineCut *= smoothstep(0.1, 0.55, land);
+  if (distToLine < 0.010) {           /* was 0.032 — now ~3x narrower */
+    var cn = 1 - distToLine / 0.010;
+    canyonCut = cn * cn * 6.0;        /* was 13.0 — much shallower */
+    /* don't slice through the coastline */
+    canyonCut *= smoothstep(2.0, 6.0, land);
   }
 
   /* ---- Cave sinkholes ---- */
   var caveCut = caveCarveAt(x, z);
 
-  /* Hills & fine detail */
-  var hill   = (fbm(x * 0.038, z * 0.038, SEED + 777, 3) - 0.5) * 3.5;
-  var detail = (fbm(x * 0.13,  z * 0.13,  SEED + 999, 2) - 0.5) * 1.0;
+  /* ---- Rolling hills & fine detail (kept for a natural feel) ---- */
+  var hill   = (fbm(x * 0.038, z * 0.038, SEED + 777, 3) - 0.5) * 3.0;
+  var detail = (fbm(x * 0.13,  z * 0.13,  SEED + 999, 2) - 0.5) * 0.9;
 
-  return land + mountain + mesa + badlands + hill + detail
-       - canyonCut - ravineCut - caveCut;
+  return land + mountain + mesa + badlands + hill + detail - canyonCut - caveCut;
 }
 
 var _hcache = new Map();
@@ -216,6 +209,7 @@ function colorAt(x, z, h) {
   var c = climateAt(x, z);
   var tint = 0.92 + 0.16 * hash2(Math.floor(x * 3), Math.floor(z * 3), 777);
   var r, g, b;
+
   if (h < -1.5) { r = 0.32; g = 0.30; b = 0.24; }
   else if (h < 0.6) {
     var t = smoothstep(-1.5, 0.6, h);
@@ -238,16 +232,16 @@ function colorAt(x, z, h) {
     r = lerp(0.72, 1.0, t4); g = lerp(0.72, 1.0, t4); b = lerp(0.80, 1.0, t4);
   }
 
-  /* Mesa tint — reddish sandstone */
-  var mesaN = fbm(x * 0.013, z * 0.013, SEED + 3333, 3);
-  var mesaT = smoothstep(0.56, 0.62, mesaN) * smoothstep(1, 5, h);
+  /* Mesa sandstone tint */
+  var mesaN = fbm(x * 0.010, z * 0.010, SEED + 3333, 3);
+  var mesaT = smoothstep(0.68, 0.74, mesaN) * smoothstep(1, 5, h);
   if (mesaT > 0.05) {
     r = lerp(r, 0.92, mesaT); g = lerp(g, 0.55, mesaT); b = lerp(b, 0.36, mesaT);
   }
 
   /* Badlands banded strata */
-  var badN = fbm(x * 0.021, z * 0.021, SEED + 4444, 3);
-  var badT = smoothstep(0.60, 0.68, badN) * smoothstep(1, 4, h);
+  var badN = fbm(x * 0.018, z * 0.018, SEED + 4444, 3);
+  var badT = smoothstep(0.72, 0.80, badN) * smoothstep(1, 4, h);
   if (badT > 0.05) {
     var band = Math.abs(Math.floor(h / 1.4)) % 3;
     var br = [0.82, 0.62, 0.90][band];
@@ -256,32 +250,28 @@ function colorAt(x, z, h) {
     r = lerp(r, br, badT); g = lerp(g, bg, badT); b = lerp(b, bb, badT);
   }
 
-  /* Cave interior darkens toward the pit floor */
+  /* Cave interior darkens hard toward the pit floor */
   var cave = caveCarveAt(x, z);
-  if (cave > 0.6) {
-    var caveT = smoothstep(0.6, 4.0, cave);
-    r = lerp(r, 0.16, caveT); g = lerp(g, 0.13, caveT); b = lerp(b, 0.12, caveT);
+  if (cave > 0.3) {
+    var caveT = smoothstep(0.3, 3.0, cave);
+    r = lerp(r, 0.09, caveT);
+    g = lerp(g, 0.07, caveT);
+    b = lerp(b, 0.06, caveT);
   }
 
   return [r * tint, g * tint, b * tint];
 }
 
-/* Per-vertex "stone-ness": 0 = grass/soil, 1 = solid rock.
-   Used by graphics.js to blend grass.png and stone.png on the terrain. */
+/* Per-vertex "stone-ness": 0 = grass/soil, 1 = solid rock. */
 function stoneAmountFromNormal(x, z, h, n) {
-  /* steep faces are stone */
   var slope = 1 - n[1];
   var steep = smoothstep(0.22, 0.55, slope);
-  /* high altitude treeline */
   var high  = smoothstep(10, 14, h);
-  /* badlands terraces */
-  var badN  = fbm(x * 0.021, z * 0.021, SEED + 4444, 3);
-  var bad   = smoothstep(0.60, 0.68, badN) * smoothstep(2, 5, h);
-  /* mesa walls & tops */
-  var mesaN = fbm(x * 0.013, z * 0.013, SEED + 3333, 3);
-  var mesa  = smoothstep(0.56, 0.62, mesaN);
-  /* cave interior */
-  var cave  = smoothstep(0.4, 2.5, caveCarveAt(x, z));
+  var badN  = fbm(x * 0.018, z * 0.018, SEED + 4444, 3);
+  var bad   = smoothstep(0.72, 0.80, badN) * smoothstep(2, 5, h);
+  var mesaN = fbm(x * 0.010, z * 0.010, SEED + 3333, 3);
+  var mesa  = smoothstep(0.68, 0.74, mesaN);
+  var cave  = smoothstep(0.3, 2.0, caveCarveAt(x, z));
   var amt = Math.max(steep, high, bad, mesa, cave);
   return clamp(amt, 0, 1);
 }
@@ -315,13 +305,13 @@ GTF.stoneAmountAt = stoneAmountAt;
 GTF.stoneAmountFromNormal = stoneAmountFromNormal;
 GTF.groundTypeAt = groundTypeAt;
 GTF.getCaveInfo = getCaveInfo;
+GTF.caveCarveAt = caveCarveAt;
 GTF.CAVE_GRID = CAVE_GRID;
 
 /* ============================================================ FEATURE TESTS */
 function hasTreeAt(x, z) {
   var h = heightAt(x, z);
   if (h < 2.2 || h > 12) return false;
-  /* no trees inside a cave pit */
   if (caveCarveAt(x, z) > 1.0) return false;
   var c = climateAt(x, z);
   if (c.moist < 0.50) return false;
@@ -370,18 +360,14 @@ function hasRockAt(x, z) {
 }
 
 /* ---- new feature tests ---- */
-
-/* Natural stone arch — rare, standalone, needs flat-ish ground. */
 function hasArchAt(x, z) {
   var h = heightAt(x, z);
   if (h < 4 || h > 14) return false;
   if (caveCarveAt(x, z) > 0.5) return false;
   var n = normalAt(x, z);
-  if (n[1] < 0.85) return false;   /* must sit on reasonably flat ground */
+  if (n[1] < 0.85) return false;
   return hash2(Math.floor(x), Math.floor(z), SEED + 7200) > 0.9965;
 }
-
-/* Hoodoo — thin rock pillar with a cap. Prefers dry, high, rocky terrain. */
 function hasHoodooAt(x, z) {
   var h = heightAt(x, z);
   if (h < 6 || h > 16) return false;
@@ -389,8 +375,6 @@ function hasHoodooAt(x, z) {
   if (c.moist > 0.55) return false;
   return hash2(Math.floor(x), Math.floor(z), SEED + 7300) > 0.993;
 }
-
-/* Boulder — chunky rock cluster, prefers rocky biomes. */
 function hasBoulderAt(x, z) {
   var h = heightAt(x, z);
   if (h < 2 || h > 15) return false;
@@ -398,23 +382,18 @@ function hasBoulderAt(x, z) {
   if (stone < 0.35) return false;
   return hash2(Math.floor(x), Math.floor(z), SEED + 7400) > 0.980;
 }
-
-/* Cliffhanger — overhanging rock slab near a steep drop. */
 function hasCliffhangerAt(x, z) {
   var h = heightAt(x, z);
   if (h < 5) return false;
-  /* check local steepness */
   var e = 1.6;
   var hl = heightAt(x - e, z), hr = heightAt(x + e, z);
   var hd = heightAt(x, z - e), hu = heightAt(x, z + e);
   var gx = (hr - hl) / (2 * e);
   var gz = (hu - hd) / (2 * e);
   var grad = Math.sqrt(gx * gx + gz * gz);
-  if (grad < 1.4) return false;   /* need a real cliff nearby */
+  if (grad < 1.4) return false;
   return hash2(Math.floor(x), Math.floor(z), SEED + 7500) > 0.988;
 }
-
-/* Floating rock — decorative boulder drifting above the terrain. */
 function hasFloatingRockAt(x, z) {
   var h = heightAt(x, z);
   if (h < 6 || h > 16) return false;
@@ -454,7 +433,6 @@ GeoAccum.prototype.box = function (x0, y0, z0, x1, y1, z1, r, g, b) {
   quad(x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, -1, 0, 0);
   quad(x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, 1, 0, 0);
 };
-/* Rounded-ish boulder: three overlapping boxes with slightly different sizes. */
 GeoAccum.prototype.boulder = function (cx, cy, cz, size, r, g, b) {
   var s = size;
   this.box(cx - s, cy, cz - s, cx + s, cy + s * 1.1, cz + s, r * 0.85, g * 0.85, b * 0.85);
@@ -566,22 +544,19 @@ function spawnRock(acc, x, z) {
 
 /* ---- new spawners ---- */
 
-/* Natural stone arch: two legs plus an arced lintel. */
+/* Natural stone arch */
 function spawnArch(acc, x, z) {
   var h = heightAt(x, z);
   var scale = 0.9 + hash2(Math.floor(x), Math.floor(z), 7700) * 0.7;
-  var span  = 3.4 * scale;   /* distance between legs */
+  var span  = 3.4 * scale;
   var legW  = 0.55 * scale;
   var height = 3.2 * scale;
   var thick = 0.55 * scale;
-
-  /* sandstone tint */
   var r = 0.86, g = 0.66, b = 0.46;
-  /* legs */
+
   acc.box(x - span * 0.5 - legW, h, z - legW, x - span * 0.5 + legW, h + height, z + legW, r * 0.85, g * 0.85, b * 0.85);
   acc.box(x + span * 0.5 - legW, h, z - legW, x + span * 0.5 + legW, h + height, z + legW, r * 0.85, g * 0.85, b * 0.85);
 
-  /* arced top — build a shallow arc from six segments */
   var segs = 6;
   for (var i = 0; i < segs; i++) {
     var t0 = i / segs;
@@ -589,7 +564,6 @@ function spawnArch(acc, x, z) {
     var segX0 = x - span * 0.5 + span * t0;
     var segX1 = x - span * 0.5 + span * t1;
     var midT = (t0 + t1) * 0.5;
-    /* arc height peaks in the middle, ~0.9*scale above the legs */
     var arcY = Math.sin(midT * Math.PI) * 0.9 * scale;
     var segThick = thick * (0.7 + 0.4 * Math.abs(Math.sin(midT * Math.PI)));
     acc.box(
@@ -600,12 +574,11 @@ function spawnArch(acc, x, z) {
       r, g, b
     );
   }
-  /* little capstone highlight on top */
   acc.box(x - 0.5 * scale, h + height + 1.0 * scale, z - 0.35 * scale,
           x + 0.5 * scale, h + height + 1.35 * scale, z + 0.35 * scale, r * 1.05, g * 1.05, b * 1.05);
 }
 
-/* Hoodoo: tapered column with a protective cap rock. */
+/* Hoodoo */
 function spawnHoodoo(acc, x, z) {
   var h = heightAt(x, z);
   var height = 3.2 + hash2(Math.floor(x), Math.floor(z), 7400) * 3.2;
@@ -624,82 +597,80 @@ function spawnHoodoo(acc, x, z) {
     var shade = 1.0 - t0 * 0.15;
     acc.box(x - w, y0, z - w, x + w, y1, z + w, rBase * shade, gBase * shade, bBase * shade);
   }
-  /* cap rock */
   var capW = 0.5 + hash2(Math.floor(x), Math.floor(z), 7401) * 0.15;
   acc.box(x - capW, h + height, z - capW, x + capW, h + height + 0.45, z + capW,
           rBase * 0.72, gBase * 0.72, bBase * 0.72);
 }
 
-/* Cave mouth: ring of rock around the sinkhole rim plus stalactites
-   hanging down and stalagmites rising from the pit floor. */
+/* Cave mouth: rim ring, dark interior wall, stalactites, stalagmites, crystals */
 function spawnCaveMouth(accStal, accRock, cave) {
   var x = cave.x, z = cave.z, r = cave.r;
-  var hCenter = heightAt(x, z);   /* pit floor */
+  var hCenter = heightAt(x, z);
 
-  /* Rock rim — small blocks around the lip of the pit */
-  var ringSegs = 10;
+  /* Raised rock rim around the pit lip — this is what makes it read as
+     "a cave" from a distance instead of a random dip. */
+  var ringSegs = 12;
   for (var i = 0; i < ringSegs; i++) {
     var a = (i / ringSegs) * Math.PI * 2;
-    var rx = x + Math.cos(a) * r * 0.92;
-    var rz = z + Math.sin(a) * r * 0.92;
+    var rx = x + Math.cos(a) * r * 1.02;
+    var rz = z + Math.sin(a) * r * 1.02;
     var rh = heightAt(rx, rz);
-    var w = 0.35 + hash2(i, cave.gx, 7501) * 0.25;
-    var hh = 0.30 + hash2(i, cave.gz, 7502) * 0.35;
-    accRock.box(rx - w, rh - 0.15, rz - w, rx + w, rh + hh, rz + w, 0.55, 0.48, 0.42);
+    var w = 0.55 + hash2(i, cave.gx, 7501) * 0.35;
+    var hh = 0.55 + hash2(i, cave.gz, 7502) * 0.55;
+    accRock.box(rx - w, rh - 0.20, rz - w, rx + w, rh + hh, rz + w, 0.55, 0.48, 0.42);
+    /* little capstone */
+    accRock.box(rx - w * 0.7, rh + hh, rz - w * 0.7, rx + w * 0.7, rh + hh + 0.22, rz + w * 0.7, 0.62, 0.55, 0.48);
   }
 
-  /* A dark interior wall — a ring of tall rock reaching up from the pit
-     floor so the inside of the cave reads as enclosed. */
-  var wallSegs = 8;
+  /* Dark interior wall — reads as the "inside" of the cave */
+  var wallSegs = 10;
   for (var i = 0; i < wallSegs; i++) {
     var a = (i / wallSegs) * Math.PI * 2;
-    var rx = x + Math.cos(a) * r * 0.78;
-    var rz = z + Math.sin(a) * r * 0.78;
+    var rx = x + Math.cos(a) * r * 0.72;
+    var rz = z + Math.sin(a) * r * 0.72;
     var lipH = heightAt(x + Math.cos(a) * r, z + Math.sin(a) * r);
-    var top = lipH - 0.1;
-    accRock.box(rx - 0.35, hCenter - 0.3, rz - 0.35, rx + 0.35, top, rz + 0.35, 0.20, 0.16, 0.14);
+    var top = lipH - 0.15;
+    accRock.box(rx - 0.55, hCenter - 0.4, rz - 0.55, rx + 0.55, top, rz + 0.55, 0.16, 0.13, 0.12);
   }
 
   /* Stalactites hanging from the rim */
-  var nStal = 6 + ((hash2(cave.gx, cave.gz, 7503) * 4) | 0);
+  var nStal = 8 + ((hash2(cave.gx, cave.gz, 7503) * 4) | 0);
   for (var i = 0; i < nStal; i++) {
     var a = (i / nStal) * Math.PI * 2 + 0.7;
-    var rr = r * (0.55 + hash2(i, 1, 7504) * 0.25);
+    var rr = r * (0.5 + hash2(i, 1, 7504) * 0.35);
     var sx = x + Math.cos(a) * rr;
     var sz = z + Math.sin(a) * rr;
-    var topY = heightAt(sx, sz) - 0.4;
-    var len = 0.5 + hash2(i, 2, 7505) * 0.8;
-    var w = 0.07 + hash2(i, 3, 7506) * 0.05;
+    var topY = heightAt(sx, sz) - 0.5;
+    var len = 0.7 + hash2(i, 2, 7505) * 1.1;
+    var w = 0.09 + hash2(i, 3, 7506) * 0.07;
     accStal.box(sx - w, topY - len, sz - w, sx + w, topY, sz + w, 0.72, 0.66, 0.60);
-    /* pointed tip */
-    accStal.box(sx - w * 0.4, topY - len - 0.15, sz - w * 0.4, sx + w * 0.4, topY - len, sz + w * 0.4, 0.62, 0.56, 0.50);
+    accStal.box(sx - w * 0.4, topY - len - 0.20, sz - w * 0.4, sx + w * 0.4, topY - len, sz + w * 0.4, 0.62, 0.56, 0.50);
   }
 
   /* Stalagmites rising from the pit floor */
-  var nStag = 5 + ((hash2(cave.gx, cave.gz, 7507) * 4) | 0);
+  var nStag = 6 + ((hash2(cave.gx, cave.gz, 7507) * 5) | 0);
   for (var i = 0; i < nStag; i++) {
     var a = (i / nStag) * Math.PI * 2 + 1.3;
-    var rr = r * hash2(i, 4, 7508) * 0.55;
+    var rr = r * hash2(i, 4, 7508) * 0.60;
     var sx = x + Math.cos(a) * rr;
     var sz = z + Math.sin(a) * rr;
     var by = heightAt(sx, sz) - 0.1;
-    var len = 0.35 + hash2(i, 5, 7509) * 0.6;
-    var w = 0.10 + hash2(i, 6, 7510) * 0.06;
+    var len = 0.5 + hash2(i, 5, 7509) * 0.85;
+    var w = 0.12 + hash2(i, 6, 7510) * 0.08;
     accStal.box(sx - w, by, sz - w, sx + w, by + len, sz + w, 0.78, 0.72, 0.66);
-    accStal.box(sx - w * 0.5, by + len, sz - w * 0.5, sx + w * 0.5, by + len + 0.18, sz + w * 0.5, 0.68, 0.62, 0.56);
+    accStal.box(sx - w * 0.5, by + len, sz - w * 0.5, sx + w * 0.5, by + len + 0.22, sz + w * 0.5, 0.68, 0.62, 0.56);
   }
 
-  /* A couple of glowing crystals inside the cave to sell "wow" */
-  var nCrystal = 2 + ((hash2(cave.gx, cave.gz, 7511) * 2) | 0);
+  /* Glowing crystals inside — sells the "wow" moment */
+  var nCrystal = 3 + ((hash2(cave.gx, cave.gz, 7511) * 3) | 0);
   for (var i = 0; i < nCrystal; i++) {
     var a = (i / nCrystal) * Math.PI * 2 + 0.4;
-    var rr = r * (0.3 + hash2(i, 7, 7512) * 0.3);
+    var rr = r * (0.25 + hash2(i, 7, 7512) * 0.35);
     var sx = x + Math.cos(a) * rr;
     var sz = z + Math.sin(a) * rr;
-    var by = heightAt(sx, sz) - 0.2;
-    var sh = 0.4 + hash2(i, 8, 7513) * 0.5;
-    var sw = 0.10;
-    /* pick a hue: blue, magenta, or green */
+    var by = heightAt(sx, sz) - 0.25;
+    var sh = 0.55 + hash2(i, 8, 7513) * 0.65;
+    var sw = 0.11;
     var hue = hash2(i, 9, 7514);
     var cr, cg, cb;
     if (hue < 0.33) { cr = 0.5; cg = 1.3; cb = 1.5; }
@@ -709,17 +680,15 @@ function spawnCaveMouth(accStal, accRock, cave) {
   }
 }
 
-/* Cliffhanger: overhanging slab jutting out from a steep drop. */
+/* Cliffhanger */
 function spawnCliffhanger(acc, x, z) {
   var h = heightAt(x, z);
-  /* downhill direction */
   var e = 1.6;
   var hl = heightAt(x - e, z), hr = heightAt(x + e, z);
   var hd = heightAt(x, z - e), hu = heightAt(x, z + e);
   var gx = (hr - hl) / (2 * e);
   var gz = (hu - hd) / (2 * e);
   var gl = Math.sqrt(gx * gx + gz * gz) || 1;
-  /* downhill vector is the negative gradient */
   var dx = -gx / gl;
   var dz = -gz / gl;
 
@@ -727,31 +696,23 @@ function spawnCliffhanger(acc, x, z) {
   var thick  = 0.42;
   var width  = 0.9 + hash2(Math.floor(x), Math.floor(z), 7601) * 0.5;
 
-  /* the slab body */
   var sx = x + dx * extent * 0.5;
   var sz = z + dz * extent * 0.5;
-  acc.box(
-    sx - width, h - thick, sz - width,
-    sx + width, h,          sz + width,
-    0.80, 0.76, 0.70
-  );
-  /* tip block hanging past the shelf */
+  acc.box(sx - width, h - thick, sz - width, sx + width, h, sz + width, 0.80, 0.76, 0.70);
+
   var tx = x + dx * extent;
   var tz = z + dz * extent;
   acc.box(tx - 0.45, h - thick - 0.20, tz - 0.45, tx + 0.45, h - 0.05, tz + 0.45, 0.72, 0.68, 0.62);
-  /* anchor root */
   acc.box(x - 0.55, h - thick - 0.35, z - 0.55, x + 0.55, h + 0.10, z + 0.55, 0.85, 0.80, 0.72);
-  /* thin support strut under the tip so it doesn't look floating */
   acc.box(tx - 0.18, h - thick - 0.20 - 0.90, tz - 0.18, tx + 0.18, h - thick - 0.20, tz + 0.18, 0.62, 0.58, 0.52);
 }
 
-/* Floating rock: small boulder drifting above the terrain. */
+/* Floating rock */
 function spawnFloatingRock(acc, x, z) {
   var h = heightAt(x, z);
   var lift = 2.5 + hash2(Math.floor(x), Math.floor(z), 7700) * 2.0;
   var size = 0.55 + hash2(Math.floor(x), Math.floor(z), 7701) * 0.5;
   acc.boulder(x, h + lift, z, size, 0.78, 0.74, 0.70);
-  /* small orbiting pebble */
   var a = hash2(Math.floor(x), Math.floor(z), 7702) * Math.PI * 2;
   var d = size * 2.0;
   acc.box(x + Math.cos(a) * d - 0.12, h + lift + 0.6, z + Math.sin(a) * d - 0.12,
@@ -759,13 +720,12 @@ function spawnFloatingRock(acc, x, z) {
           0.72, 0.68, 0.64);
 }
 
-/* Boulder: chunky rock cluster on the ground. */
+/* Boulder cluster */
 function spawnBoulder(acc, x, z) {
   var h = heightAt(x, z);
   var size = 0.7 + hash2(Math.floor(x), Math.floor(z), 7800) * 0.8;
   var r = 0.72, g = 0.68, b = 0.64;
   acc.boulder(x, h - 0.1, z, size, r, g, b);
-  /* a couple of smaller companions */
   var n = 1 + ((hash2(Math.floor(x), Math.floor(z), 7801) * 3) | 0);
   for (var i = 0; i < n; i++) {
     var a = (i / n) * Math.PI * 2 + hash2(i, 1, 7802) * 1.5;
@@ -803,8 +763,6 @@ function groundColorAt(x, z) {
 GTF.groundColorAt = groundColorAt;
 
 /* ============================================================ CHUNK TERRAIN GEOMETRY */
-/* Adds a per-vertex "stone" attribute (0..1) that graphics.js uses to
-   blend grass.png with stone.png on the terrain mesh. */
 function buildChunkTerrainGeo(cx, cz) {
   var geo = new THREE.PlaneGeometry(CHUNK, CHUNK, CHUNK_RES, CHUNK_RES);
   geo.rotateX(-Math.PI / 2);
