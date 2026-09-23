@@ -710,7 +710,7 @@ function updateHud() {
 /* ============================================================ LOOP */
 var contextLost = false;
 var lastTime = performance.now();
-var fpsAccum = 0, fpsFrames = 0, minimapAccum = 0;
+var fpsAccum = 0, fpsFrames = 0;
 
 function loop(now) {
   requestAnimationFrame(loop);
@@ -776,16 +776,12 @@ function loop(now) {
   GTF.renderer.render(GTF.scene, GTF.camera);
 
   fpsAccum += dt; fpsFrames++;
-  minimapAccum += dt;
   if (fpsAccum >= 0.5) {
     hudFps.textContent = Math.round(fpsFrames / fpsAccum);
     fpsAccum = 0; fpsFrames = 0;
     updateHud();
   }
-  if (minimapAccum >= 0.12) {
-    minimapAccum = 0;
-    GTF.drawMinimap();
-  }
+  if ((fpsFrames & 7) === 0) GTF.drawMinimap();
 }
 
 window.addEventListener('resize', function(){
@@ -821,10 +817,6 @@ playBtn.addEventListener('click', function(){
 function boot() {
   if (typeof THREE === 'undefined') {
     failBoot('three.js did not load from any CDN. Check internet and reload.');
-    return;
-  }
-  if (!GTF.modules || !GTF.modules.terrain || !GTF.modules.graphics || !GTF.modules.models) {
-    failBoot('World modules did not load in the required order: terrain → graphics → models.');
     return;
   }
   setBoot(5, 'CHECKING TEXTURES…');
@@ -901,7 +893,11 @@ function boot() {
           setBoot(75, 'GENERATING CHUNKS…');
           setTimeout(function(){
             GTF.updateChunks(true);
-            GTF.processChunkQueue(24);
+            for (var i = 0; i < 20 && GTF.chunkQueue.length > 0; i++) {
+              var job = GTF.chunkQueue.shift();
+              if (GTF.chunks.has(job.key)) continue;
+              GTF.chunks.set(job.key, GTF.buildChunk(job.cx, job.cz));
+            }
             renderer.render(scene, camera);
 
             hudMode.textContent = 'WEBGL 3D';

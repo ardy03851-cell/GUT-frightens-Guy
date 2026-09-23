@@ -1,9 +1,8 @@
-/* terrain.js — world generation: deterministic terrain math, biome/feature queries,
-   terrain geometry, and shared geometry helpers. Exposes APIs on window.GTF. */
+/* terrain.js — pure data, math, and geometry for the world.
+   Exposes everything on window.GTF (Guy The Folk Valley namespace). */
 (function () {
 'use strict';
 var GTF = window.GTF = window.GTF || {};
-GTF.modules = GTF.modules || {};
 
 /* ============================================================ MATH */
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -270,6 +269,104 @@ GeoAccum.prototype.toGeometry = function () {
 };
 GTF.GeoAccum = GeoAccum;
 
+/* ============================================================ FEATURE SPAWNERS */
+function spawnTree(trunks, leaves, x, z) {
+  var h = heightAt(x, z);
+  var c = climateAt(x, z);
+  var isPine  = c.temp  < 0.42;
+  var isBirch = !isPine && c.temp > 0.55 && c.moist > 0.65;
+  var barkR = 0.9, barkG = 0.72, barkB = 0.52;
+  if (isBirch) { barkR = 1.0; barkG = 0.98; barkB = 0.92; }
+  var leafR = 0.72, leafG = 1.02, leafB = 0.66;
+  if (isPine)  { leafR = 0.50; leafG = 0.80; leafB = 0.50; }
+  if (c.moist > 0.75) { leafR *= 0.85; leafG *= 0.95; leafB *= 0.82; }
+  var cx = x, cz = z;
+  if (isPine) {
+    trunks.box(cx - 0.09, h, cz - 0.09, cx + 0.09, h + 2.4, cz + 0.09, barkR * 0.9, barkG * 0.75, barkB * 0.6);
+    leaves.box(cx - 0.55, h + 2.0, cz - 0.55, cx + 0.55, h + 3.1, cz + 0.55, leafR * 0.75, leafG * 0.9, leafB * 0.7);
+    leaves.box(cx - 0.42, h + 2.9, cz - 0.42, cx + 0.42, h + 3.9, cz + 0.42, leafR * 0.85, leafG, leafB * 0.8);
+    leaves.box(cx - 0.26, h + 3.7, cz - 0.26, cx + 0.26, h + 4.7, cz + 0.26, leafR, leafG * 1.1, leafB * 0.9);
+    leaves.box(cx - 0.10, h + 4.5, cz - 0.10, cx + 0.10, h + 5.2, cz + 0.10, leafR * 1.1, leafG * 1.2, leafB);
+  } else if (isBirch) {
+    trunks.box(cx - 0.07, h, cz - 0.07, cx + 0.07, h + 2.6, cz + 0.07, barkR, barkG, barkB);
+    leaves.box(cx - 0.42, h + 2.3, cz - 0.42, cx + 0.42, h + 3.3, cz + 0.42, leafR * 1.1, leafG * 1.25, leafB * 0.95);
+    leaves.box(cx - 0.26, h + 3.1, cz - 0.26, cx + 0.26, h + 4.0, cz + 0.26, leafR * 1.2, leafG * 1.35, leafB);
+  } else {
+    trunks.box(cx - 0.11, h, cz - 0.11, cx + 0.11, h + 1.8, cz + 0.11, barkR, barkG * 0.85, barkB * 0.7);
+    leaves.box(cx - 0.55, h + 1.6, cz - 0.55, cx + 0.55, h + 2.7, cz + 0.55, leafR, leafG * 1.05, leafB * 0.85);
+    leaves.box(cx - 0.42, h + 2.6, cz - 0.42, cx + 0.42, h + 3.5, cz + 0.42, leafR * 1.05, leafG * 1.15, leafB * 0.9);
+    leaves.box(cx - 0.22, h + 3.4, cz - 0.22, cx + 0.22, h + 4.1, cz + 0.22, leafR * 1.15, leafG * 1.25, leafB);
+  }
+}
+function spawnCrystal(acc, x, z) {
+  var h = heightAt(x, z);
+  var hueR = hash2(Math.floor(x), Math.floor(z), 7101);
+  var cr, cg, cb;
+  if (hueR < 0.33) { cr = 0.5; cg = 1.2; cb = 1.4; }
+  else if (hueR < 0.66) { cr = 1.3; cg = 0.6; cb = 1.4; }
+  else { cr = 0.7; cg = 1.3; cb = 0.7; }
+  var shards = 3 + Math.floor(hash2(Math.floor(x), Math.floor(z), 7102) * 3);
+  for (var i = 0; i < shards; i++) {
+    var ox = (hash2(Math.floor(x * 10 + i), Math.floor(z * 10), 7103) - 0.5) * 0.7;
+    var oz = (hash2(Math.floor(x * 10), Math.floor(z * 10 + i), 7104) - 0.5) * 0.7;
+    var sh = 0.4 + hash2(i, 1, 7105) * 1.0;
+    var sw = 0.06 + hash2(i, 2, 7105) * 0.09;
+    acc.box(x + ox - sw, h, z + oz - sw, x + ox + sw, h + sh, z + oz + sw, cr, cg, cb);
+  }
+}
+function spawnSpire(acc, x, z) {
+  var h = heightAt(x, z);
+  var height = 1.5 + hash2(Math.floor(x), Math.floor(z), 8101) * 3.5;
+  var width = 0.25 + hash2(Math.floor(x), Math.floor(z), 8102) * 0.25;
+  var segs = 4;
+  for (var i = 0; i < segs; i++) {
+    var t = i / segs;
+    var w = width * (1 - t * 0.7);
+    var y0 = h + (height * i / segs);
+    var y1 = h + (height * (i + 1) / segs);
+    var tint = 0.72 + t * 0.15;
+    acc.box(x - w, y0, z - w, x + w, y1, z + w, tint, tint, tint * 1.05);
+  }
+}
+function spawnMushroom(accStalk, accCap, x, z) {
+  var h = heightAt(x, z);
+  var height = 1.4 + hash2(Math.floor(x), Math.floor(z), 9101) * 1.0;
+  var capW = 0.45 + hash2(Math.floor(x), Math.floor(z), 9102) * 0.25;
+  accStalk.box(x - 0.10, h, z - 0.10, x + 0.10, h + height, z + 0.10, 1.2, 1.1, 0.95);
+  accCap.box(x - capW, h + height - 0.1, z - capW, x + capW, h + height + 0.35, z + capW, 1.3, 0.4, 0.4);
+  var spots = 3;
+  for (var i = 0; i < spots; i++) {
+    var ang = (i / spots) * Math.PI * 2 + 0.5;
+    var sx = x + Math.cos(ang) * capW * 0.5;
+    var sz = z + Math.sin(ang) * capW * 0.5;
+    accCap.box(sx - 0.06, h + height + 0.34, sz - 0.06, sx + 0.06, h + height + 0.42, sz + 0.06, 1.4, 1.4, 1.2);
+  }
+}
+function spawnFlower(acc, x, z) {
+  var h = heightAt(x, z);
+  var fr = hash2(Math.floor(x * 3), Math.floor(z * 3), 10101);
+  var r, g, b;
+  if (fr < 0.33) { r = 1.3; g = 0.5; b = 0.7; }
+  else if (fr < 0.66) { r = 1.3; g = 1.1; b = 0.4; }
+  else { r = 0.75; g = 0.75; b = 1.35; }
+  acc.box(x - 0.025, h, z - 0.025, x + 0.025, h + 0.30, z + 0.025, 0.5, 0.95, 0.4);
+  acc.box(x - 0.09, h + 0.28, z - 0.09, x + 0.09, h + 0.42, z + 0.09, r, g, b);
+}
+function spawnRock(acc, x, z) {
+  var h = heightAt(x, z);
+  var w1 = 0.25 + hash2(Math.floor(x), Math.floor(z), 11101) * 0.30;
+  var w2 = 0.15 + hash2(Math.floor(x), Math.floor(z), 11102) * 0.20;
+  acc.box(x - w1, h, z - w1, x + w1, h + 0.30, z + w1, 0.8, 0.8, 0.85);
+  acc.box(x - w2, h, z - w2 * 0.8, x + w2, h + 0.55, z + w2, 0.7, 0.7, 0.78);
+}
+
+GTF.spawnTree = spawnTree;
+GTF.spawnCrystal = spawnCrystal;
+GTF.spawnSpire = spawnSpire;
+GTF.spawnMushroom = spawnMushroom;
+GTF.spawnFlower = spawnFlower;
+GTF.spawnRock = spawnRock;
+
 /* ============================================================ GROUND PARTICLE COLORS */
 var GROUND_PARTICLE_COLORS = {
   grass:  0x6fae58,
@@ -312,7 +409,5 @@ function buildChunkTerrainGeo(cx, cz) {
   return geo;
 }
 GTF.buildChunkTerrainGeo = buildChunkTerrainGeo;
-
-GTF.modules.terrain = true;
 
 })();

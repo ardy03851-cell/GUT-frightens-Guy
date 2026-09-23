@@ -1,12 +1,8 @@
-/* graphics.js — renderer, textures, materials, scene assembly, chunks,
-   day/night, and minimap. Depends on terrain.js; model spawning is supplied by models.js. */
+/* graphics.js — WebGL renderer, textures, materials, chunks, sprites,
+   particles, day/night, minimap. Depends on terrain.js being loaded first. */
 (function () {
 'use strict';
 var GTF = window.GTF = window.GTF || {};
-GTF.modules = GTF.modules || {};
-if (!GTF.modules.terrain) {
-  throw new Error('graphics.js requires terrain.js to be loaded first.');
-}
 
 /* Short-hand terrain helpers (must exist — loaded from terrain.js) */
 var hash2  = GTF.hash2;
@@ -274,6 +270,122 @@ function cropTransparent(img, cb) {
 }
 GTF.cropTransparent = cropTransparent;
 
+/* ============================================================ PARTICLES */
+var particlePool = [];
+function initParticles(scene) {
+  var tex = cvsTex(16, 16, tParticle, false);
+  for (var i = 0; i < 100; i++) {
+    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending });
+    var s = new THREE.Sprite(mat);
+    s.visible = false;
+    scene.add(s);
+    particlePool.push({ sprite: s, life: 0, maxLife: 0, vx: 0, vy: 0, vz: 0 });
+  }
+}
+function spawnParticles(x, y, z, count, color) {
+  for (var i = 0; i < count; i++) {
+    var p = null;
+    for (var j = 0; j < particlePool.length; j++) {
+      if (particlePool[j].life <= 0) { p = particlePool[j]; break; }
+    }
+    if (!p) return;
+    var ang = Math.random() * Math.PI * 2;
+    var spd = 1.5 + Math.random() * 2;
+    p.vx = Math.cos(ang) * spd; p.vz = Math.sin(ang) * spd;
+    p.vy = 2 + Math.random() * 2;
+    p.sprite.position.set(x, y, z);
+    p.sprite.material.color.setHex(color || 0xfff0a0);
+    p.sprite.material.opacity = 1;
+    p.sprite.scale.set(0.35, 0.35, 1);
+    p.sprite.visible = true;
+    p.life = p.maxLife = 0.6 + Math.random() * 0.3;
+  }
+}
+function updateParticles(dt) {
+  for (var i = 0; i < particlePool.length; i++) {
+    var p = particlePool[i];
+    if (p.life <= 0) continue;
+    p.life -= dt; p.vy -= 9 * dt;
+    p.sprite.position.x += p.vx * dt;
+    p.sprite.position.y += p.vy * dt;
+    p.sprite.position.z += p.vz * dt;
+    var t = p.life / p.maxLife;
+    p.sprite.material.opacity = t;
+    p.sprite.scale.setScalar(0.35 * (0.4 + t * 0.6));
+    if (p.life <= 0) p.sprite.visible = false;
+  }
+}
+GTF.initParticles = initParticles;
+GTF.spawnParticles = spawnParticles;
+GTF.updateParticles = updateParticles;
+
+/* ============================================================ BIRDS / CLOUDS */
+var birds = [], clouds = [];
+function initBirds(scene) {
+  var tex = cvsTex(12, 6, tBird, false);
+  for (var i = 0; i < 14; i++) {
+    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+    var s = new THREE.Sprite(mat);
+    s.center.set(0.5, 0.5);
+    s.scale.set(1.2, 0.6, 1);
+    s.userData.angle = Math.random() * Math.PI * 2;
+    s.userData.radius = 15 + Math.random() * 25;
+    s.userData.height = 14 + Math.random() * 8;
+    s.userData.speed = 0.15 + Math.random() * 0.15;
+    s.userData.wing = Math.random() * Math.PI * 2;
+    scene.add(s);
+    birds.push(s);
+  }
+}
+function updateBirds(dt, time) {
+  var player = GTF.player;
+  if (!player) return;
+  for (var i = 0; i < birds.length; i++) {
+    var b = birds[i];
+    b.userData.angle += b.userData.speed * dt;
+    b.userData.wing += dt * 8;
+    var w = 0.6 + Math.abs(Math.sin(b.userData.wing)) * 0.6;
+    b.scale.set(1.2, w, 1);
+    b.position.set(
+      player.x + Math.cos(b.userData.angle) * b.userData.radius,
+      player.y + b.userData.height + Math.sin(time * 0.3 + i) * 1.5,
+      player.z + Math.sin(b.userData.angle) * b.userData.radius
+    );
+  }
+}
+function initClouds(scene) {
+  var tex = cvsTex(32, 16, tCloud, false);
+  for (var i = 0; i < 22; i++) {
+    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.75 });
+    var s = new THREE.Sprite(mat);
+    s.center.set(0.5, 0.5);
+    var ang = Math.random() * Math.PI * 2;
+    var rad = 30 + Math.random() * 70;
+    var sz = 8 + Math.random() * 12;
+    s.scale.set(sz, sz * 0.6, 1);
+    s.position.set(Math.cos(ang) * rad, 30 + Math.random() * 15, Math.sin(ang) * rad);
+    s.userData.angle = ang; s.userData.radius = rad;
+    s.userData.speed = 0.008 + Math.random() * 0.012;
+    scene.add(s);
+    clouds.push(s);
+  }
+}
+function updateClouds(dt) {
+  var player = GTF.player;
+  if (!player) return;
+  for (var i = 0; i < clouds.length; i++) {
+    var c = clouds[i];
+    c.userData.angle += c.userData.speed * dt;
+    c.position.x = player.x + Math.cos(c.userData.angle) * c.userData.radius;
+    c.position.z = player.z + Math.sin(c.userData.angle) * c.userData.radius;
+  }
+}
+GTF.initBirds = initBirds;
+GTF.updateBirds = updateBirds;
+GTF.initClouds = initClouds;
+GTF.updateClouds = updateClouds;
+
 /* ============================================================ SCENE STATE */
 GTF.scene = null;
 GTF.camera = null;
@@ -287,7 +399,6 @@ GTF.waterMaterial = null;
 GTF.terrainMaterial = null;
 GTF.barkMaterial = null;
 GTF.leafMaterial = null;
-GTF.rockMaterial = null;
 GTF.crystalMaterial = null;
 GTF.mushroomCapMaterial = null;
 GTF.playerSprite = null;
@@ -316,6 +427,22 @@ function buildWaterPlane(scene) {
   return plane;
 }
 
+/* ============================================================ ITEMS */
+function makeItemSprite(typ, x, z) {
+  var base = GTF.itemMaterials[typ];
+  var s = new THREE.Sprite(base.clone());
+  s.center.set(0.5, 0.5);
+  s.scale.set(0.75, 0.75, 1);
+  var h = GTF.heightAt(x, z);
+  s.position.set(x, h + 0.7, z);
+  s.userData.baseY = h + 0.7;
+  s.userData.phase = hash2(Math.floor(x), Math.floor(z), GTF.SEED + 1717) * Math.PI * 2;
+  s.userData.key = Math.round(x) + ',' + Math.round(z);
+  s.userData.typ = typ;
+  s.userData.value = typ === 'coin' ? 1 : typ === 'potion' ? 3 : typ === 'gem' ? 5 : 12;
+  return s;
+}
+
 /* ============================================================ CHUNKS */
 function buildChunk(cx, cz) {
   var scene = GTF.scene;
@@ -326,7 +453,6 @@ function buildChunk(cx, cz) {
   var trunkAccum    = new GTF.GeoAccum();
   var leafAccum     = new GTF.GeoAccum();
   var spireAccum    = new GTF.GeoAccum();
-  var rockAccum      = new GTF.GeoAccum();
   var crystalAccum  = new GTF.GeoAccum();
   var mushStalkAccum = new GTF.GeoAccum();
   var mushCapAccum  = new GTF.GeoAccum();
@@ -344,7 +470,7 @@ function buildChunk(cx, cz) {
       else if (GTF.hasMushroomAt(wx, wz))        GTF.spawnMushroom(mushStalkAccum, mushCapAccum, wx, wz);
       else if (GTF.hasCrystalAt(wx, wz))         GTF.spawnCrystal(crystalAccum, wx, wz);
       else if (GTF.hasSpireAt(wx, wz))           GTF.spawnSpire(spireAccum, wx, wz);
-      else if (GTF.hasRockAt(wx, wz))            GTF.spawnRock(rockAccum, wx, wz);
+      else if (GTF.hasRockAt(wx, wz))            GTF.spawnRock(spireAccum, wx, wz);
     }
   }
 
@@ -368,8 +494,7 @@ function buildChunk(cx, cz) {
       var key = Math.round(wx2) + ',' + Math.round(wz2);
       if (GTF.collectedItems.has(key)) continue;
       var typ = GTF.itemTypeAt(wx2, wz2);
-      var sp = GTF.makeItemSprite(typ, wx2, wz2);
-      if (!sp) continue;
+      var sp = makeItemSprite(typ, wx2, wz2);
       group.add(sp);
       itemSprites.push(sp);
     }
@@ -384,7 +509,6 @@ function buildChunk(cx, cz) {
   var trunkMesh     = addMesh(trunkAccum,     GTF.barkMaterial);
   var leafMesh      = addMesh(leafAccum,      GTF.leafMaterial);
   var spireMesh     = addMesh(spireAccum,     GTF.barkMaterial);
-  var rockMesh      = addMesh(rockAccum,      GTF.rockMaterial);
   var crystalMesh   = addMesh(crystalAccum,   GTF.crystalMaterial);
   var mushStalkMesh = addMesh(mushStalkAccum, GTF.barkMaterial);
   var mushCapMesh   = addMesh(mushCapAccum,   GTF.mushroomCapMaterial);
@@ -393,7 +517,7 @@ function buildChunk(cx, cz) {
   return {
     key: cx + ',' + cz, cx: cx, cz: cz, group: group,
     terrainGeo: terrainGeo,
-    meshes: [trunkMesh, leafMesh, spireMesh, rockMesh, crystalMesh, mushStalkMesh, mushCapMesh],
+    meshes: [trunkMesh, leafMesh, spireMesh, crystalMesh, mushStalkMesh, mushCapMesh],
     items: itemSprites
   };
 }
@@ -411,51 +535,30 @@ function disposeChunk(chunk) {
 function updateChunks(force) {
   var player = GTF.player;
   if (!player) return;
-
   var pcx = Math.floor(player.x / CHUNK);
   var pcz = Math.floor(player.z / CHUNK);
   var key = pcx + ',' + pcz;
-
-  /* Drop queued work that is no longer inside the player's active view. */
-  var kept = [];
-  for (var qi = 0; qi < GTF.chunkQueue.length; qi++) {
-    var pending = GTF.chunkQueue[qi];
-    if (Math.abs(pending.cx - pcx) <= VIEW_RADIUS &&
-        Math.abs(pending.cz - pcz) <= VIEW_RADIUS) {
-      kept.push(pending);
-    }
-  }
-  GTF.chunkQueue = kept;
-
   if (!force && key === lastPlayerChunk) return;
   lastPlayerChunk = key;
-
   for (var dz = -VIEW_RADIUS; dz <= VIEW_RADIUS; dz++) {
     for (var dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; dx++) {
       var cx = pcx + dx, cz = pcz + dz;
       var k = cx + ',' + cz;
       if (GTF.chunks.has(k)) continue;
-
       var already = false;
       for (var q = 0; q < GTF.chunkQueue.length; q++) {
         if (GTF.chunkQueue[q].key === k) { already = true; break; }
       }
       if (already) continue;
-
       GTF.chunkQueue.push({ cx: cx, cz: cz, key: k, d: dx * dx + dz * dz });
     }
   }
-
   GTF.chunkQueue.sort(function (a, b) { return a.d - b.d; });
-
   var toRemove = [];
   GTF.chunks.forEach(function (chunk, k) {
     var dx = chunk.cx - pcx, dz = chunk.cz - pcz;
-    if (Math.abs(dx) > VIEW_RADIUS + 1 || Math.abs(dz) > VIEW_RADIUS + 1) {
-      toRemove.push(k);
-    }
+    if (Math.abs(dx) > VIEW_RADIUS + 1 || Math.abs(dz) > VIEW_RADIUS + 1) toRemove.push(k);
   });
-
   for (var i = 0; i < toRemove.length; i++) {
     var c = GTF.chunks.get(toRemove[i]);
     disposeChunk(c);
@@ -465,22 +568,10 @@ function updateChunks(force) {
 GTF.updateChunks = updateChunks;
 
 function processChunkQueue(ms) {
-  var player = GTF.player;
-  if (!player) return;
-
-  var pcx = Math.floor(player.x / CHUNK);
-  var pcz = Math.floor(player.z / CHUNK);
   var t0 = performance.now();
-
   while (GTF.chunkQueue.length > 0 && performance.now() - t0 < ms) {
     var job = GTF.chunkQueue.shift();
-
-    if (Math.abs(job.cx - pcx) > VIEW_RADIUS ||
-        Math.abs(job.cz - pcz) > VIEW_RADIUS) {
-      continue;
-    }
     if (GTF.chunks.has(job.key)) continue;
-
     GTF.chunks.set(job.key, buildChunk(job.cx, job.cz));
   }
 }
@@ -494,7 +585,7 @@ function updateDayNight(dt) {
   var scene = GTF.scene, sunLight = GTF.sunLight,
       hemiLight = GTF.hemiLight, ambientLight = GTF.ambientLight,
       renderer = GTF.renderer;
-  if (!scene || !sunLight || !hemiLight || !ambientLight) return;
+  if (!scene || !sunLight) return;
 
   timeOfDay = (timeOfDay + dt / 90) % 1;
   var sunAngle = (timeOfDay - 0.25) * Math.PI * 2;
@@ -511,7 +602,7 @@ function updateDayNight(dt) {
   if (sunsetAmount > 0) currentSkyColor.lerp(sunsetSkyColor, Math.min(1, sunsetAmount) * 0.5);
   scene.background.copy(currentSkyColor);
   scene.fog.color.copy(currentSkyColor);
-  if (renderer) renderer.setClearColor(currentSkyColor, 1);
+  renderer.setClearColor(currentSkyColor, 1);
   var hh = Math.floor(timeOfDay * 24);
   var mm = Math.floor((timeOfDay * 24 - hh) * 60);
   if (hudTimeEl) hudTimeEl.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
@@ -591,9 +682,6 @@ function setupScene() {
   GTF.leafMaterial = new THREE.MeshLambertMaterial({
     map: cvsTex(16, 16, tLeaves), vertexColors: true
   });
-  GTF.rockMaterial = new THREE.MeshLambertMaterial({
-    map: cvsTex(16, 16, tBark), vertexColors: true
-  });
   GTF.crystalMaterial = new THREE.MeshLambertMaterial({
     vertexColors: true,
     emissive: 0x446688,
@@ -624,10 +712,9 @@ function setupScene() {
   GTF.playerSprite.scale.set(GTF.playerSprite.userData.baseScaleX, spriteHeight, 1);
   scene.add(GTF.playerSprite);
 
-  if (typeof GTF.initModelSystems !== 'function') {
-    throw new Error('models.js must expose initModelSystems() before the scene can start.');
-  }
-  GTF.initModelSystems(scene);
+  initParticles(scene);
+  initBirds(scene);
+  initClouds(scene);
   return scene;
 }
 GTF.setupScene = setupScene;
@@ -636,7 +723,6 @@ GTF.setupScene = setupScene;
 function applyTextures(texMap) {
   applyProbedTexture(GTF.terrainMaterial, texMap['assets/grass.png']);
   applyProbedTexture(GTF.barkMaterial,    texMap['assets/tree_bark.png']);
-  applyProbedTexture(GTF.rockMaterial,    texMap['assets/tree_bark.png']);
   applyProbedTexture(GTF.leafMaterial,    texMap['assets/tree_leaves.png']);
   applyProbedTexture(GTF.waterMaterial,   texMap['assets/water.png']);
   applyProbedSprite(GTF.itemMaterials.coin,   texMap['assets/coin.png']);
@@ -646,7 +732,5 @@ function applyTextures(texMap) {
   applyPlayerTexture(texMap['assets/player.png'], GTF.playerSprite);
 }
 GTF.applyTextures = applyTextures;
-
-GTF.modules.graphics = true;
 
 })();

@@ -3,17 +3,13 @@
      • item sprites: coin, potion, gem, chest
      • particle system (pickup sparks)
      • decorative sprites: birds, clouds
-   Loads after terrain.js and graphics.js. Purely owns spawned models/sprites,
-   particles, and decorative animated objects through the shared window.GTF namespace.
+   Loads after terrain.js and graphics.js. Purely builds geometry/sprites and
+   attaches them onto the shared window.GTF namespace.
    v2 — every model rebuilt with more parts, larger silhouettes and richer
    colour variation. Same public API as before. */
 (function () {
 'use strict';
 var GTF = window.GTF = window.GTF || {};
-GTF.modules = GTF.modules || {};
-if (!GTF.modules.terrain || !GTF.modules.graphics) {
-  throw new Error('models.js requires terrain.js and graphics.js to be loaded first.');
-}
 
 /* ============================================================ HELPERS */
 var heightAt   = GTF.heightAt;
@@ -382,10 +378,6 @@ function addHalo(parent, typ) {
 
 function makeItemSprite(typ, x, z) {
   var base = GTF.itemMaterials[typ];
-  if (!base) {
-    console.warn('[models] Missing material for item type: ' + typ);
-    return null;
-  }
   var s = new THREE.Sprite(base.clone());
   s.center.set(0.5, 0.5);
   s.scale.set(1.05, 1.05, 1);
@@ -418,9 +410,7 @@ function tParticle(g) {
 }
 
 var particlePool = [];
-var modelScene = null;
 function initParticles(scene) {
-  if (particlePool.length > 0) return;
   var tex = cvsTex(16, 16, tParticle, false);
   for (var i = 0; i < 160; i++) {
     var mat = new THREE.SpriteMaterial({
@@ -463,12 +453,7 @@ function updateParticles(dt) {
     var t = p.life / p.maxLife;
     p.sprite.material.opacity = t;
     p.sprite.scale.setScalar(0.45 * (0.4 + t * 0.6));
-    if (p.life <= 0) {
-      p.life = 0;
-      p.vx = p.vy = p.vz = 0;
-      p.sprite.visible = false;
-      p.sprite.material.opacity = 0;
-    }
+    if (p.life <= 0) p.sprite.visible = false;
   }
 }
 GTF.initParticles   = initParticles;
@@ -508,7 +493,6 @@ function tBird(g) {
 
 var birds = [], clouds = [];
 function initBirds(scene) {
-  if (birds.length > 0) return;
   var tex = cvsTex(16, 8, tBird, false);
   for (var i = 0; i < 18; i++) {
     var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
@@ -548,7 +532,6 @@ function updateBirds(dt, time) {
   }
 }
 function initClouds(scene) {
-  if (clouds.length > 0) return;
   var tex = cvsTex(64, 32, tCloud, false);
   for (var i = 0; i < 20; i++) {
     var mat = new THREE.SpriteMaterial({
@@ -588,16 +571,5 @@ GTF.initBirds    = initBirds;
 GTF.updateBirds  = updateBirds;
 GTF.initClouds   = initClouds;
 GTF.updateClouds = updateClouds;
-
-function initModelSystems(scene) {
-  if (modelScene === scene) return;
-  modelScene = scene;
-  initParticles(scene);
-  initBirds(scene);
-  initClouds(scene);
-}
-GTF.initModelSystems = initModelSystems;
-
-GTF.modules.models = true;
 
 })();
